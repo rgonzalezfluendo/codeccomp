@@ -7,8 +7,9 @@
 TOODs:
 [x] Allow move border or show only one video
 [x] border fixed when zoom
+[x] simple configure sources
 [ ] refactor mixer with a status (center_x, center_y, zoom, border)
-[ ] simple configure sources
+[ ] config toml file
 [ ] full configure sources
 [ ] configure encoders
 [ ] metrics
@@ -36,7 +37,6 @@ User can change the video player zoom using the next keys:
  * Up/Down/Right/Left: Move the frame
  * r: reset the zoom
 Also mouse navigation events can be used for a better UX.
-
 
 "#;
 
@@ -141,12 +141,20 @@ fn main() -> Result<(), anyhow::Error> {
 
     gst::init().unwrap();
 
+    let use_testrc = std::env::var("CODECCOMP_TEST_SRC").as_deref() == Ok("1");
+    let pipeline_src_srt = if use_testrc {
+        format!("gltestsrc pattern=mandelbrot name=src num-buffers=1000 ! video/x-raw(memory:GLMemory),framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload")
+    } else {
+        //TODO no fix caps use generic
+        format!("v4l2src ! image/jpeg, width=1280, height=720, framerate=30/1 ! jpegdec ! videoconvertscale ! videorate ")
+    };
+
     //TODO(-100) handle no opengl pipelines with compositor and videotestsrc
     //TODO handle num-buffers
     //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
     let pipeline_srt = format!(
         r#"
-        gltestsrc pattern=mandelbrot name=src num-buffers=1000 ! video/x-raw(memory:GLMemory),framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload ! queue ! tee name=tee_src
+        {pipeline_src_srt} ! video/x-raw,framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! queue ! tee name=tee_src
         tee_src.src_0 ! queue name=enc0 ! x264enc bitrate=2048 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue name=dec0 !
         decodebin3 ! queue name=end0 ! mix.sink_0
         tee_src.src_1 ! queue name=enc1 ! x264enc bitrate=200 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue name=dec1 !
