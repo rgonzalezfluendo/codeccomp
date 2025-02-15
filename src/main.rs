@@ -9,12 +9,21 @@
 // * r: reset the zoom
 // Also mouse navigation events can be used for a better UX.
 
+/*
+TOODs:
+[ ] Allow move border or show only one video
+[ ] configure sources
+[ ] configure encoders
+[ ] metrics
+ */
+
 use gst::prelude::*;
 use gst_video::video_event::NavigationEvent;
 use std::sync::Mutex;
 
 const WIDTH: i32 = 1280;
 const HEIGHT: i32 = 720;
+const HALFWIDTH: i32 = WIDTH / 2;
 
 #[derive(Default)]
 struct MouseState {
@@ -90,19 +99,29 @@ fn main() -> Result<(), anyhow::Error> {
     //TODO handle num-buffers
     //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
     let pipeline_srt = format!(
-        "glvideomixer name=mix background=1 sink_0::xpos=0 sink_0::ypos=0 sink_0::zorder=0 sink_0::width={WIDTH} sink_0::height={HEIGHT} ! xvimagesink \
-         gltestsrc pattern=mandelbrot name=src num-buffers=1000 ! video/x-raw(memory:GLMemory),framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! queue ! mix.sink_0"
+        r#"
+        gltestsrc pattern=mandelbrot name=src num-buffers=1000 ! video/x-raw(memory:GLMemory),framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload ! queue ! tee name=tee_src
+        tee_src.src_0 ! queue name=enc0 ! x264enc bitrate=2048 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue name=dec0 !
+        decodebin3 ! queue name=end0 ! mix.sink_0
+        tee_src.src_1 ! queue name=enc1 ! x264enc bitrate=200 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue name=dec1 !
+        decodebin3 ! queue name=end1 ! mix.sink_1
+        glvideomixer name=mix sink_0::zorder=100 sink_0::width={HALFWIDTH} sink_0::crop-right={HALFWIDTH} sink_0::width={HALFWIDTH} sink_1::crop-left={HALFWIDTH} sink_1::xpos={HALFWIDTH} !
+        glvideomixer name=zoom background=1 sink_0::xpos=0 sink_0::ypos=0 sink_0::zorder=0 sink_0::width={WIDTH} sink_0::height={HEIGHT} ! xvimagesink
+    "#
     );
 
-    let pipeline = gst::parse::launch(&pipeline_srt).unwrap().downcast::<gst::Pipeline>().unwrap();
+    let pipeline = gst::parse::launch(&pipeline_srt)
+        .unwrap()
+        .downcast::<gst::Pipeline>()
+        .unwrap();
 
-    let mixer = pipeline.by_name("mix").unwrap();
-    let mixer_src_pad = mixer.static_pad("src").unwrap();
-    let mixer_sink_pad_weak = mixer.static_pad("sink_0").unwrap().downgrade();
+    let zoom_mixer = pipeline.by_name("zoom").unwrap();
+    let zoom_mixer_src_pad = zoom_mixer.static_pad("src").unwrap();
+    let zoom_mixer_sink_pad_weak = zoom_mixer.static_pad("sink_0").unwrap().downgrade();
 
-    // Probe added in the sink pad to get direct navigation events w/o transformation done by the mixer
-    mixer_src_pad.add_probe(gst::PadProbeType::EVENT_UPSTREAM, move |_, probe_info| {
-        let mixer_sink_pad = mixer_sink_pad_weak.upgrade().unwrap();
+    // Probe added in the sink pad to get direct navigation events w/o transformation done by the zoom_mixer
+    zoom_mixer_src_pad.add_probe(gst::PadProbeType::EVENT_UPSTREAM, move |_, probe_info| {
+        let zoom_mixer_sink_pad = zoom_mixer_sink_pad_weak.upgrade().unwrap();
 
         let Some(ev) = probe_info.event() else {
             return gst::PadProbeReturn::Ok;
@@ -119,47 +138,47 @@ fn main() -> Result<(), anyhow::Error> {
         match nav_event {
             NavigationEvent::KeyPress { key, .. } => match key.as_str() {
                 "Left" => {
-                    let xpos = mixer_sink_pad.property::<i32>("xpos");
-                    mixer_sink_pad.set_property("xpos", xpos - 10);
+                    let xpos = zoom_mixer_sink_pad.property::<i32>("xpos");
+                    zoom_mixer_sink_pad.set_property("xpos", xpos - 10);
                 }
                 "Right" => {
-                    let xpos = mixer_sink_pad.property::<i32>("xpos");
-                    mixer_sink_pad.set_property("xpos", xpos + 10);
+                    let xpos = zoom_mixer_sink_pad.property::<i32>("xpos");
+                    zoom_mixer_sink_pad.set_property("xpos", xpos + 10);
                 }
                 "Up" => {
-                    let ypos = mixer_sink_pad.property::<i32>("ypos");
-                    mixer_sink_pad.set_property("ypos", ypos - 10);
+                    let ypos = zoom_mixer_sink_pad.property::<i32>("ypos");
+                    zoom_mixer_sink_pad.set_property("ypos", ypos - 10);
                 }
                 "Down" => {
-                    let ypos = mixer_sink_pad.property::<i32>("ypos");
-                    mixer_sink_pad.set_property("ypos", ypos + 10);
+                    let ypos = zoom_mixer_sink_pad.property::<i32>("ypos");
+                    zoom_mixer_sink_pad.set_property("ypos", ypos + 10);
                 }
                 "plus" => {
-                    zoom(mixer_sink_pad, WIDTH / 2, HEIGHT / 2, true);
+                    zoom(zoom_mixer_sink_pad, WIDTH / 2, HEIGHT / 2, true);
                 }
                 "minus" => {
-                    zoom(mixer_sink_pad, WIDTH / 2, HEIGHT / 2, false);
+                    zoom(zoom_mixer_sink_pad, WIDTH / 2, HEIGHT / 2, false);
                 }
                 "r" => {
-                    reset_zoom(mixer_sink_pad);
+                    reset_zoom(zoom_mixer_sink_pad);
                 }
                 _ => (),
             },
             NavigationEvent::MouseMove { x, y, .. } => {
                 let state = clicked.lock().unwrap();
                 if state.clicked {
-                    let xpos = mixer_sink_pad.property::<i32>("xpos");
-                    let ypos = mixer_sink_pad.property::<i32>("ypos");
+                    let xpos = zoom_mixer_sink_pad.property::<i32>("xpos");
+                    let ypos = zoom_mixer_sink_pad.property::<i32>("ypos");
 
                     let new_xpos = state.clicked_xpos + (x - state.clicked_x) as i32;
                     let new_ypos = state.clicked_ypos + (y - state.clicked_y) as i32;
 
                     if new_xpos != xpos {
-                        mixer_sink_pad.set_property("xpos", new_xpos);
+                        zoom_mixer_sink_pad.set_property("xpos", new_xpos);
                     }
 
                     if new_ypos != ypos {
-                        mixer_sink_pad.set_property("ypos", new_ypos);
+                        zoom_mixer_sink_pad.set_property("ypos", new_ypos);
                     }
                 }
             }
@@ -169,14 +188,14 @@ fn main() -> Result<(), anyhow::Error> {
                     state.clicked = true;
                     state.clicked_x = x;
                     state.clicked_y = y;
-                    state.clicked_xpos = mixer_sink_pad.property("xpos");
-                    state.clicked_ypos = mixer_sink_pad.property("ypos");
+                    state.clicked_xpos = zoom_mixer_sink_pad.property("xpos");
+                    state.clicked_ypos = zoom_mixer_sink_pad.property("ypos");
                 } else if button == 2 || button == 3 || button == 274 || button == 273 {
-                    reset_zoom(mixer_sink_pad);
+                    reset_zoom(zoom_mixer_sink_pad);
                 } else if button == 4 {
-                    zoom(mixer_sink_pad, x as i32, y as i32, true);
+                    zoom(zoom_mixer_sink_pad, x as i32, y as i32, true);
                 } else if button == 5 {
-                    zoom(mixer_sink_pad, x as i32, y as i32, false);
+                    zoom(zoom_mixer_sink_pad, x as i32, y as i32, false);
                 }
             }
             NavigationEvent::MouseButtonRelease { button, .. } => {
@@ -187,9 +206,9 @@ fn main() -> Result<(), anyhow::Error> {
             }
             NavigationEvent::MouseScroll { x, y, delta_y, .. } => {
                 if delta_y > 0.0 {
-                    zoom(mixer_sink_pad, x as i32, y as i32, true);
+                    zoom(zoom_mixer_sink_pad, x as i32, y as i32, true);
                 } else if delta_y < 0.0 {
-                    zoom(mixer_sink_pad, x as i32, y as i32, false);
+                    zoom(zoom_mixer_sink_pad, x as i32, y as i32, false);
                 }
             }
             _ => (),
