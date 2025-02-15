@@ -1,0 +1,18 @@
+[package]
+name = "codeccomp"
+version = "0.1.0"
+authors = ["Ruben Gonzalez <rubenrua@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+
+[dependencies.gst]
+git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs"
+features = ["v1_24"]
+package="gstreamer"
+
+[dependencies.gst_video]
+git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs"
+features = ["v1_24"]
+package="gstreamer-video"
