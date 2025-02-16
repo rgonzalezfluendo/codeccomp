@@ -196,7 +196,7 @@ fn main() -> Result<(), anyhow::Error> {
 
                     status.move_pos_to(new_xpos, new_ypos);
                 }
-            },
+            }
             NavigationEvent::MouseButtonPress { button, x, y, .. } => {
                 // zoom
                 if button == 1 || button == 272 {

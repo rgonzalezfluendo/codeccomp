@@ -127,15 +127,16 @@ impl Status {
             },
             height: viewport_height,
             crop_right: {
-                // Note crop before zoom scaling (because glvideomixer implementation)w
-                if self.width + self.offset_x > self.border {
-                    if self.offset_x < self.border {
-                        self.width - self.border + self.offset_x
-                    } else {
-                        self.width
-                    }
-                } else {
+                if viewport_width + viewport_offset_x < self.border {
                     0
+                } else if viewport_offset_x > self.border {
+                    self.width
+                } else {
+                    // Note crop before zoom scaling (because glvideomixer implementation)w
+                    let scale = self.width as f32 / viewport_width as f32;
+                    let crop_right_scaled =
+                        (viewport_width + viewport_offset_x - self.border) as f32;
+                    (crop_right_scaled * scale) as i32
                 }
             },
             crop_left: 0,
@@ -149,6 +150,7 @@ impl Status {
             },
             ypos: viewport_offset_y,
             width: {
+                //TODO refactor
                 if self.border < (viewport_width - viewport_offset_x) {
                     if viewport_width > self.border - viewport_offset_x {
                         if self.border < viewport_offset_x {
@@ -170,15 +172,15 @@ impl Status {
             height: viewport_height,
             crop_right: 0,
             crop_left: {
-                // Note crop before zoom scaling (because glvideomixer implementation)
-                if self.offset_x < self.border {
-                    if self.border - self.offset_x > self.width {
-                        self.width
-                    } else {
-                        self.border - self.offset_x
-                    }
-                } else {
+                if viewport_width + viewport_offset_x < self.border {
+                    self.width
+                } else if viewport_offset_x > self.border {
                     0
+                } else {
+                    // Note crop before zoom scaling (because glvideomixer implementation)w
+                    let scale = self.width as f32 / viewport_width as f32;
+                    let crop_right_scaled = (self.border - viewport_offset_x) as f32;
+                    (crop_right_scaled * scale) as i32
                 }
             },
         };
@@ -435,6 +437,9 @@ mod tests {
         assert_eq!(status.zoom, 40);
         assert_eq!(status.offset_x, -10);
         assert_eq!(pos0.width + pos1.width, current_width);
+        assert_eq!(pos0.crop_right, 615);
+        assert_eq!(pos1.crop_left, 665);
+
 
         status.move_pos(-10, 0);
         let (pos0, pos1) = status.get_positions();
@@ -442,6 +447,8 @@ mod tests {
         assert_eq!(status.zoom, 40);
         assert_eq!(status.offset_x, -20);
         assert_eq!(pos0.width + pos1.width, current_width);
+        assert_eq!(pos0.crop_right, 590);
+        assert_eq!(pos1.crop_left, 690);
 
         status.move_pos(-10, 0);
         let (pos0, pos1) = status.get_positions();
@@ -449,6 +456,8 @@ mod tests {
         assert_eq!(status.zoom, 40);
         assert_eq!(status.offset_x, -30);
         assert_eq!(pos0.width + pos1.width, current_width);
+        assert_eq!(pos0.crop_right, 565);
+        assert_eq!(pos1.crop_left, 715);
 
         status.move_pos(-10, 0);
         let (pos0, pos1) = status.get_positions();
@@ -456,6 +465,8 @@ mod tests {
         assert_eq!(status.zoom, 40);
         assert_eq!(status.offset_x, -40);
         assert_eq!(pos0.width + pos1.width, current_width);
+        assert_eq!(pos0.crop_right, 540);
+        assert_eq!(pos1.crop_left, 740);
     }
 
     #[test]
