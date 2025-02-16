@@ -8,7 +8,7 @@ TODOs:
 [x] Allow move border or show only one video
 [x] border fixed when zoom
 [x] simple configure sources
-[ ] refactor mixer with a status (center_x, center_y, zoom, border)
+[x] refactor mixer with a status (center_x, center_y, zoom, border)
 [ ] config toml file
 [ ] full configure sources
 [ ] configure encoders
@@ -191,21 +191,20 @@ fn main() -> Result<(), anyhow::Error> {
             NavigationEvent::MouseMove { x, y, .. } => {
                 let state = state.lock().unwrap();
                 if state.clicked {
-                    let new_xpos = (x - state.clicked_x) as i32;
-                    let new_ypos = (y - state.clicked_y) as i32;
+                    let new_xpos = (x - state.clicked_x) as i32 + state.clicked_xpos;
+                    let new_ypos = (y - state.clicked_y) as i32 + state.clicked_ypos;
 
                     status.move_pos_to(new_xpos, new_ypos);
                 }
             }
             NavigationEvent::MouseButtonPress { button, x, y, .. } => {
-                // zoom
                 if button == 1 || button == 272 {
                     let mut state = state.lock().unwrap();
                     state.clicked = true;
                     state.clicked_x = x;
                     state.clicked_y = y;
-                    state.clicked_xpos = mixer_sink_0_pad.property("xpos");
-                    state.clicked_ypos = mixer_sink_0_pad.property("ypos");
+                    state.clicked_xpos = status.offset_x;
+                    state.clicked_ypos = status.offset_y;
                 } else if button == 2 || button == 3 || button == 274 || button == 273 {
                     status.reset();
                 } else if button == 4 {
