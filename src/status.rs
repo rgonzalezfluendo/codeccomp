@@ -18,7 +18,7 @@ pub struct Position {
     pub crop_left: i32,
 }
 
-const BORDER_STEP: i32 = 10;
+const BORDER_STEP: usize = 10;
 const WIDTH: i32 = 1280;
 const HEIGHT: i32 = 720;
 const HALF_WIDTH: i32 = WIDTH / 2;
@@ -91,13 +91,46 @@ impl Status {
 
     /// Increases the zoom level, capping it at a sensible maximum (e.g., 1000000)
     pub fn zoom_in(&mut self) {
-        self.zoom = (self.zoom + 10).min(1000000);
+        self.zoom = (self.zoom + BORDER_STEP).min(1000000);
     }
 
     /// Decreases the zoom level, ensuring it stays at a minimum of 1
     pub fn zoom_out(&mut self) {
-        self.zoom = (self.zoom.saturating_sub(10)).max(1);
+        self.zoom = (self.zoom.saturating_sub(BORDER_STEP)).max(1);
     }
+
+    /// Increases the zoom level, capping it at a sensible maximum (e.g., 1000000)
+    /// Update offset to keep centered
+    pub fn zoom_in_center_at(&mut self, x: i32, y: i32) {
+        self.zoom_in();
+        self.fix_offset_when_zoom(x, y, true);
+    }
+
+    /// Decreases the zoom level, ensuring it stays at a minimum of 1,
+    /// Update offset to keep centered
+    pub fn zoom_out_center_at(&mut self, x: i32, y: i32) {
+        self.zoom_out();
+        self.fix_offset_when_zoom(x, y, false);
+    }
+
+    fn fix_offset_when_zoom(&mut self, x: i32, y: i32, inside: bool) {
+        let diff = x-HALF_WIDTH;
+        let new_offset = diff / (BORDER_STEP as i32);
+        if inside {
+            self.offset_x -= new_offset;
+        } else {
+            self.offset_x += new_offset;
+        }
+
+        let diff = y - (HEIGHT / 2);
+        let new_offset = diff / (BORDER_STEP as i32);
+        if inside {
+            self.offset_y -= new_offset;
+        } else {
+            self.offset_y += new_offset;
+        }
+    }
+
 
     /// Calculates the two `Position`s for the input videos based on the status values
     pub fn get_positions(&self) -> (Position, Position) {
@@ -524,4 +557,35 @@ mod tests {
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, 0);
     }
+
+    #[test]
+    fn test_zoom_inout_center_at() {
+        let mut status = Status::default();
+        status.zoom_in_center_at(0, 0);
+
+        let (pos0, pos1) = status.get_positions();
+        assert_eq!(status.zoom, 110);
+        assert_eq!(status.offset_x, 64);
+        assert_eq!(status.offset_y, 36);
+        assert_eq!(status.border, HALF_WIDTH);
+        assert_eq!(status.width, WIDTH);
+        assert_eq!(status.height, HEIGHT);
+
+        status.zoom_out_center_at(0, 0);
+        assert_eq!(status.zoom, 100);
+        assert_eq!(status.offset_x, 0);
+        assert_eq!(status.offset_y, 0);
+        assert_eq!(status.border, HALF_WIDTH);
+        assert_eq!(status.width, WIDTH);
+        assert_eq!(status.height, HEIGHT);
+
+        status.zoom_out_center_at(0, 0);
+        assert_eq!(status.zoom, 90);
+        assert_eq!(status.offset_x, -64);
+        assert_eq!(status.offset_y, -36);
+        assert_eq!(status.border, HALF_WIDTH);
+        assert_eq!(status.width, WIDTH);
+        assert_eq!(status.height, HEIGHT);
+    }
+
 }

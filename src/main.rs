@@ -9,10 +9,14 @@ TODOs:
 [x] border fixed when zoom
 [x] simple configure sources
 [x] refactor mixer with a status (center_x, center_y, zoom, border)
+[x] zoom_in_center_at
+[ ] status with any resolution
 [ ] config toml file
 [ ] full configure sources
 [ ] configure encoders
-[ ] metrics
+[ ] Bandwidth metrics
+[ ] latency metrics
+[ ] PSNR vs. SSIM metrics
 [ ] Windows support
 [ ] osX support
 [ ] Fake sink
@@ -208,13 +212,9 @@ fn main() -> Result<(), anyhow::Error> {
                 } else if button == 2 || button == 3 || button == 274 || button == 273 {
                     status.reset();
                 } else if button == 4 {
-                    // TODO center zoom
-                    status.zoom_in();
-                    //zoom(zoom_mixer_sink_pad, x as i32, y as i32, true);
+                    status.zoom_in_center_at(x as i32, y as i32);
                 } else if button == 5 {
-                    // TODO center zoom
-                    status.zoom_out();
-                    //zoom(zoom_mixer_sink_pad, x as i32, y as i32, false);
+                    status.zoom_out_center_at(x as i32, y as i32);
                 }
             }
             NavigationEvent::MouseButtonRelease { button, .. } => {
@@ -225,13 +225,9 @@ fn main() -> Result<(), anyhow::Error> {
             }
             NavigationEvent::MouseScroll { x, y, delta_y, .. } => {
                 if delta_y > 0.0 {
-                    // TODO center zoom
-                    status.zoom_in();
-                    //zoom(zoom_mixer_sink_pad, x as i32, y as i32, true);
+                    status.zoom_in_center_at(x as i32, y as i32);
                 } else if delta_y < 0.0 {
-                    // TODO center zoom
-                    status.zoom_out();
-                    //zoom(zoom_mixer_sink_pad, x as i32, y as i32, false);
+                    status.zoom_out_center_at(x as i32, y as i32);
                 }
             }
             _ => (),
