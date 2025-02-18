@@ -39,7 +39,7 @@ User can change the video showed using the next keys:
  * 3: First and second videos side by side (default)
  * 4: Move side by side border left
  * 5: Move side by side border right
-Also click in the botton of the video can be done too change the side by side border
+Also click in the botton of the video can be done to change the side by side border
 
 User can change the video player zoom using the next keys:
  * +: Zoom in
@@ -204,6 +204,10 @@ fn main() -> Result<(), anyhow::Error> {
                     state.clicked_y = y;
                     state.clicked_xpos = status.offset_x;
                     state.clicked_ypos = status.offset_y;
+
+                    if y >= 600.0 {
+                        status.move_border_to(x as i32);
+                    }
                 } else if button == 2 || button == 3 || button == 274 || button == 273 {
                     status.reset();
                 } else if button == 4 {
