@@ -61,9 +61,6 @@ struct MouseState {
 
 fn update_mixer(mixer_sink_0_pad: gst::Pad, mixer_sink_1_pad: gst::Pad, status: Status) {
     let (pos0, pos1) = status.get_positions();
-    //TODO test_move_pos_right_out_of_border
-    //GStreamer-Video-CRITICAL **: 08:26:22.690: gst_video_calculate_display_ratio: assertion 'num > 0' failed
-    //dbg!(pos0, pos1);
 
     mixer_sink_0_pad.set_properties(&[
         ("width", &pos0.width),
@@ -72,8 +69,6 @@ fn update_mixer(mixer_sink_0_pad: gst::Pad, mixer_sink_1_pad: gst::Pad, status: 
         ("ypos", &pos0.ypos),
         ("crop-right", &pos0.crop_right),
     ]);
-
-    //mixer_sink_0_pad.set_property("alpha", 0.0 );
 
     mixer_sink_1_pad.set_properties(&[
         ("width", &pos1.width),
