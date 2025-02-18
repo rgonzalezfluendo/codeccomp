@@ -37,6 +37,15 @@ impl Default for Status {
 }
 
 impl Status {
+    pub fn new(width: i32, height: i32) -> Self {
+        Self {
+            width,
+            height,
+            border: width / 2,
+            ..Default::default()
+        }
+    }
+
     /// Reset default values
     pub fn reset(&mut self) {
         let d = Status::default();
@@ -114,7 +123,7 @@ impl Status {
     }
 
     fn fix_offset_when_zoom(&mut self, x: i32, y: i32, inside: bool) {
-        let diff = x-HALF_WIDTH;
+        let diff = x - (self.width / 2);
         let new_offset = diff / (BORDER_STEP as i32);
         if inside {
             self.offset_x -= new_offset;
@@ -122,7 +131,7 @@ impl Status {
             self.offset_x += new_offset;
         }
 
-        let diff = y - (HEIGHT / 2);
+        let diff = y - (self.height / 2);
         let new_offset = diff / (BORDER_STEP as i32);
         if inside {
             self.offset_y -= new_offset;
@@ -130,7 +139,6 @@ impl Status {
             self.offset_y += new_offset;
         }
     }
-
 
     /// Calculates the two `Position`s for the input videos based on the status values
     pub fn get_positions(&self) -> (Position, Position) {
@@ -295,6 +303,14 @@ mod tests {
         assert_eq!(pos1.height, HEIGHT);
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, HALF_WIDTH + 10);
+
+        status.reset_position();
+        assert_eq!(status.zoom, 100);
+        assert_eq!(status.offset_x, 0);
+        assert_eq!(status.offset_y, 0);
+        assert_eq!(status.border, HALF_WIDTH);
+        assert_eq!(status.width, WIDTH);
+        assert_eq!(status.height, HEIGHT);
     }
 
     #[test]
@@ -379,6 +395,14 @@ mod tests {
         assert_eq!(pos1.height, HEIGHT);
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, HALF_WIDTH + 10);
+
+        status.reset_position();
+        assert_eq!(status.zoom, 100);
+        assert_eq!(status.offset_x, 0);
+        assert_eq!(status.offset_y, 0);
+        assert_eq!(status.border, HALF_WIDTH + 10);
+        assert_eq!(status.width, WIDTH);
+        assert_eq!(status.height, HEIGHT);
     }
 
     #[test]
@@ -484,7 +508,6 @@ mod tests {
         assert_eq!(pos0.crop_right, 615);
         assert_eq!(pos1.crop_left, 665);
 
-
         status.move_pos(-10, 0);
         let (pos0, pos1) = status.get_positions();
 
@@ -574,7 +597,6 @@ mod tests {
         let mut status = Status::default();
         status.zoom_in_center_at(0, 0);
 
-        let (pos0, pos1) = status.get_positions();
         assert_eq!(status.zoom, 110);
         assert_eq!(status.offset_x, 64);
         assert_eq!(status.offset_y, 36);
@@ -599,4 +621,43 @@ mod tests {
         assert_eq!(status.height, HEIGHT);
     }
 
+    #[test]
+    fn test_new_zoom_inout_center_at() {
+        let width = 12800;
+        let height = 7200;
+        let half_width = 12800 / 2;
+
+        let mut status = Status::new(width, height);
+        assert_eq!(status.zoom, 100);
+        assert_eq!(status.offset_x, 0);
+        assert_eq!(status.offset_y, 0);
+        assert_eq!(status.border, half_width);
+        assert_eq!(status.width, width);
+        assert_eq!(status.height, height);
+
+        status.zoom_in_center_at(0, 0);
+
+        assert_eq!(status.zoom, 110);
+        assert_eq!(status.offset_x, 640);
+        assert_eq!(status.offset_y, 360);
+        assert_eq!(status.border, half_width);
+        assert_eq!(status.width, width);
+        assert_eq!(status.height, height);
+
+        status.zoom_out_center_at(0, 0);
+        assert_eq!(status.zoom, 100);
+        assert_eq!(status.offset_x, 0);
+        assert_eq!(status.offset_y, 0);
+        assert_eq!(status.border, half_width);
+        assert_eq!(status.width, width);
+        assert_eq!(status.height, height);
+
+        status.zoom_out_center_at(0, 0);
+        assert_eq!(status.zoom, 90);
+        assert_eq!(status.offset_x, -640);
+        assert_eq!(status.offset_y, -360);
+        assert_eq!(status.border, half_width);
+        assert_eq!(status.width, width);
+        assert_eq!(status.height, height);
+    }
 }

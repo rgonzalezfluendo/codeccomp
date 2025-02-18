@@ -10,8 +10,8 @@ TODOs:
 [x] simple configure sources
 [x] refactor mixer with a status (center_x, center_y, zoom, border)
 [x] zoom_in_center_at
-[ ] status with any resolution
-[ ] config toml file
+[x] status with any resolution
+[x] config toml file
 [ ] full configure sources
 [ ] configure encoders
 [ ] Bandwidth metrics
@@ -23,15 +23,15 @@ TODOs:
 
  */
 
+mod settings;
 mod status;
 
 use gst::prelude::*;
 use gst_video::video_event::NavigationEvent;
+use settings::Settings;
 use status::Status;
 use std::sync::Mutex;
 
-const WIDTH: i32 = 1280;
-const HEIGHT: i32 = 720;
 const HELP: &'static str = r#"
 User can change the video showed using the next keys:
  * 1: Only first video
@@ -80,36 +80,34 @@ fn update_mixer(mixer_sink_0_pad: gst::Pad, mixer_sink_1_pad: gst::Pad, status: 
 }
 
 fn main() -> Result<(), anyhow::Error> {
+    let settings = Settings::new()?;
+
     gst::init()?;
+
     //TODO delete msg
     println!("Hello, video codec comparator\n{HELP}");
 
     let state = Mutex::new(MouseState::default());
-    let status = Mutex::new(Status::default());
+    let status = Mutex::new(Status::new(settings.input.width, settings.input.height));
 
     gst::init().unwrap();
 
-    let use_testrc = std::env::var("CODECCOMP_TEST_SRC").as_deref() == Ok("1");
-    let pipeline_src_srt = if use_testrc || true {
-        // pattern=smpte
-        format!("gltestsrc pattern=mandelbrot name=src num-buffers=1000 ! video/x-raw(memory:GLMemory),framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload")
-    } else {
-        //TODO no fix caps use generic
-        format!("v4l2src ! image/jpeg, width=1280, height=720, framerate=30/1 ! jpegdec ! videoconvertscale ! videorate ")
-    };
+    let src = settings.get_pipeline_src();
+    let enc0 = settings.get_pipeline_enc0();
+    let enc1 = settings.get_pipeline_enc1();
+    let sink = settings.get_pipeline_sink();
 
     //TODO(-100) handle no opengl pipelines with compositor and videotestsrc
-    //TODO handle num-buffers
     //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
     let pipeline_srt = format!(
         r#"
-        {pipeline_src_srt} ! video/x-raw,framerate=30/1,width={WIDTH},height={HEIGHT},pixel-aspect-ratio=1/1 ! queue ! tee name=tee_src
-        tee_src.src_0 ! queue name=enc0 ! x264enc bitrate=2048 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue name=dec0 !
+        {src} ! queue ! tee name=tee_src
+        tee_src.src_0 ! queue name=enc0 ! {enc0} ! queue name=dec0 !
         decodebin3 ! queue name=end0 ! mix.sink_0
-        tee_src.src_1 ! queue name=enc1 ! x264enc bitrate=200 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue name=dec1 !
+        tee_src.src_1 ! queue name=enc1 ! {enc1} ! queue name=dec1 !
         decodebin3 ! queue name=end1 ! mix.sink_1
         glvideomixer name=mix  !
-        xvimagesink
+        {sink}
     "#
     );
 
