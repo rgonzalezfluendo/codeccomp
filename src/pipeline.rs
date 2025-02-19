@@ -236,10 +236,14 @@ mod tests {
         test_tour(BackendType::GL);
     }
 
+    #[test]
+    #[cfg_attr(not(feature = "expensive_tests"), ignore)]
     fn test_tour_vaapi() {
         test_tour(BackendType::VAAPI);
     }
 
+    #[test]
+    #[cfg_attr(not(feature = "expensive_tests"), ignore)]
     fn test_tour_cpu() {
         test_tour(BackendType::CPU);
     }

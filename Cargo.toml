@@ -19,3 +19,6 @@ package="gstreamer"
 git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs"
 features = ["v1_24"]
 package="gstreamer-video"
+
+[features]
+expensive_tests = []
