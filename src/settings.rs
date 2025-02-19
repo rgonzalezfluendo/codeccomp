@@ -6,8 +6,7 @@ const HEIGHT: i32 = 720;
 const FRAMERATE: &str = "30/1";
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 pub enum BackendType {
     #[default]
     GL,
@@ -17,8 +16,7 @@ pub enum BackendType {
     D3D12,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 pub enum InputType {
     #[default]
     Test,
@@ -57,8 +55,7 @@ impl Input {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Default)]
 pub enum EncoderType {
     #[default]
     x264enc,

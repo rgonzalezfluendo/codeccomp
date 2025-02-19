@@ -3,6 +3,7 @@
 // TODO add copyright
 //
 
+mod pipeline;
 mod settings;
 mod status;
 
@@ -39,54 +40,9 @@ struct MouseState {
     clicked_ypos: i32,
 }
 
-fn update_mixer(
-    status: Status,
-    mixer_sink_0_pad: &gst::Pad,
-    mixer_sink_1_pad: &gst::Pad,
-    crop0: &gst::Element,
-    crop1: &gst::Element,
-    compositor_supports_crop: bool,
-) {
-    let (pos0, pos1) = status.get_positions();
-
-    if compositor_supports_crop {
-        mixer_sink_0_pad.set_properties(&[
-            ("width", &pos0.width),
-            ("height", &pos0.height),
-            ("xpos", &pos0.xpos),
-            ("ypos", &pos0.ypos),
-            ("crop-right", &pos0.crop_right),
-        ]);
-
-        mixer_sink_1_pad.set_properties(&[
-            ("width", &pos1.width),
-            ("height", &pos1.height),
-            ("xpos", &pos1.xpos),
-            ("ypos", &pos1.ypos),
-            ("crop-left", &pos1.crop_left),
-        ]);
-    } else {
-        mixer_sink_0_pad.set_properties(&[
-            ("width", &pos0.width),
-            ("height", &pos0.height),
-            ("xpos", &pos0.xpos),
-            ("ypos", &pos0.ypos),
-        ]);
-
-        mixer_sink_1_pad.set_properties(&[
-            ("width", &pos1.width),
-            ("height", &pos1.height),
-            ("xpos", &pos1.xpos),
-            ("ypos", &pos1.ypos),
-        ]);
-
-        crop0.set_property("right", pos0.crop_right);
-        crop1.set_property("left", pos1.crop_left);
-    }
-}
-
 fn main() -> Result<(), anyhow::Error> {
     let settings = Settings::new()?;
+    let compositor_supports_crop: bool = settings.gst_pipeline_compositor_supports_crop();
 
     gst::init()?;
 
@@ -99,33 +55,8 @@ fn main() -> Result<(), anyhow::Error> {
     let status = Mutex::new(Status::new(settings.input.width, settings.input.height));
 
     gst::init().unwrap();
+    let pipeline_srt = pipeline::get_srt(settings);
 
-    let src = settings.get_pipeline_src();
-    let enc0 = settings.get_pipeline_enc0();
-    let enc1 = settings.get_pipeline_enc1();
-    let sink = settings.get_pipeline_sink();
-    let compositor = settings.get_pipeline_compositor();
-    let compositor_supports_crop: bool = settings.gst_pipeline_compositor_supports_crop();
-
-    //TODO(-100) handle no opengl pipelines with compositor and videotestsrc
-    //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
-    let pipeline_srt = format!(
-        r#"
-        {src} ! queue ! tee name=tee_src
-        tee_src.src_0 ! queue name=enc0 ! {enc0} ! queue name=dec0 !
-        decodebin3 ! videocrop name=crop0 ! queue name=end0 ! mix.sink_0
-        tee_src.src_1 ! queue name=enc1 ! {enc1} ! queue name=dec1 !
-        decodebin3 ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
-        {compositor} name=mix  !
-        {sink}
-    "#
-    );
-
-    if settings.debug {
-        println!("pipeline:\n{}", &pipeline_srt);
-    }
-
-    // decodebin3 ! "video/x-raw(memory:VAMemory)"
     let pipeline = gst::parse::launch(&pipeline_srt)
         .unwrap()
         .downcast::<gst::Pipeline>()
@@ -138,8 +69,8 @@ fn main() -> Result<(), anyhow::Error> {
     let mixer_sink_0_pad = mixer.static_pad("sink_0").unwrap();
     let mixer_sink_1_pad = mixer.static_pad("sink_1").unwrap();
 
-    update_mixer(
-        *status.lock().unwrap(),
+    pipeline::update_mixer(
+        &status.lock().unwrap(),
         &mixer_sink_0_pad,
         &mixer_sink_1_pad,
         &crop0,
@@ -150,6 +81,7 @@ fn main() -> Result<(), anyhow::Error> {
     // Probe added in the sink pad to get direct navigation events w/o transformation done by the zoom_mixer
     mixer_src_pad.add_probe(gst::PadProbeType::EVENT_UPSTREAM, move |_, probe_info| {
         let mut status = status.lock().unwrap();
+        let original_status = status.clone();
 
         let Some(ev) = probe_info.event() else {
             return gst::PadProbeReturn::Ok;
@@ -252,15 +184,16 @@ fn main() -> Result<(), anyhow::Error> {
             _ => (),
         }
 
-        //TODO only update if needed
-        update_mixer(
-            *status,
-            &mixer_sink_0_pad,
-            &mixer_sink_1_pad,
-            &crop0,
-            &crop1,
-            compositor_supports_crop,
-        );
+        if original_status != *status {
+            pipeline::update_mixer(
+                &status,
+                &mixer_sink_0_pad,
+                &mixer_sink_1_pad,
+                &crop0,
+                &crop1,
+                compositor_supports_crop,
+            );
+        }
 
         gst::PadProbeReturn::Ok
     });

@@ -8,10 +8,7 @@
  * [ ] PSNR vs. SSIM metrics
  * [ ] Windows support
  * [ ] osX support
- * [ ] Fake sink
- * [ ] Readme
- * [ ] create compositor backend: compositor, vacompositor, glvideomixer (crop-right), Windows?
- * [ ] create tests for compositor backend
+ * [ ] fix and enable test_tour_vaapi and test_tour_cpu
 
 ## GStreamer issues
 
