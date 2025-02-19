@@ -12,15 +12,18 @@ TODOs:
 [x] zoom_in_center_at
 [x] status with any resolution
 [x] config toml file
-[ ] full configure sources
-[ ] configure encoders
+[x] full configure sources
+[x] configure encoders
 [ ] Bandwidth metrics
 [ ] latency metrics
 [ ] PSNR vs. SSIM metrics
 [ ] Windows support
 [ ] osX support
 [ ] Fake sink
-
+[ ] Readme
+[x] GST_DEBUG_DUMP_DOT_DIR support
+[ ] create compositor backend: compositor, vacompositor, glvideomixer (crop-right), Windows?
+[ ] create tests for compositor backend
  */
 
 mod settings;
@@ -263,6 +266,10 @@ fn main() -> Result<(), anyhow::Error> {
             }
             _ => (),
         };
+    }
+
+    if let Ok(_) = std::env::var("GST_DEBUG_DUMP_DOT_DIR").as_deref()  {
+        pipeline.debug_to_dot_file(gst::DebugGraphDetails::all(), "codeccomp");
     }
 
     pipeline
