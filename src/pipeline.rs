@@ -1,4 +1,4 @@
-use crate::settings::BackendType;
+use crate::status::Position;
 use crate::Settings;
 use crate::Status;
 
@@ -32,6 +32,27 @@ pub fn get_srt(settings: Settings) -> String {
     pipeline_srt
 }
 
+fn fix_pos(pos: &mut Position, width: i32, compositor_supports_crop: bool) {
+    // workaround to handle gst issue when width==0 with any video mixers
+    // see `glvideomixer sink_0::width=0` in README.md
+    if pos.width == 0 {
+        pos.width = width;
+        pos.xpos = width;
+    }
+
+    // workaround to handle gst issue when crop==total_width with compositor and vacompositor
+    // see `compositor and vacompositor video out of the box` in README.md
+    if !compositor_supports_crop {
+        if pos.crop_right == width {
+            pos.crop_right = width - 10;
+        }
+
+        if pos.crop_left == width {
+            pos.crop_left = width - 10;
+        }
+    }
+}
+
 pub fn update_mixer(
     status: &Status,
     mixer_sink_0_pad: &gst::Pad,
@@ -40,7 +61,10 @@ pub fn update_mixer(
     crop1: &gst::Element,
     compositor_supports_crop: bool,
 ) {
-    let (pos0, pos1) = status.get_positions();
+    let (mut pos0, mut pos1) = status.get_positions();
+
+    fix_pos(&mut pos0, status.width, compositor_supports_crop);
+    fix_pos(&mut pos1, status.width, compositor_supports_crop);
 
     //TODO refactor avoid copy and paste
     if compositor_supports_crop {
@@ -82,6 +106,49 @@ pub fn update_mixer(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settings::BackendType;
+
+    #[test]
+    fn test_fix_pos_with_0() {
+        let width: i32 = 720;
+        let mut pos = Position {
+            xpos: 0,
+            ypos: 216,
+            width: 0,
+            height: 288,
+            crop_right: 720,
+            crop_left: 0,
+        };
+
+        fix_pos(&mut pos, width, true);
+        assert_eq!(pos.xpos, width);
+        assert_eq!(pos.ypos, 216);
+        assert_eq!(pos.width, width);
+        assert_eq!(pos.height, 288);
+        assert_eq!(pos.crop_right, 720);
+        assert_eq!(pos.crop_left, 0);
+    }
+
+    #[test]
+    fn test_fix_pos_video_out_of_box() {
+        let width: i32 = 720;
+        let mut pos = Position {
+            xpos: 0,
+            ypos: 216,
+            width: 0,
+            height: 288,
+            crop_right: 720,
+            crop_left: 0,
+        };
+
+        fix_pos(&mut pos, width, false);
+        assert_eq!(pos.xpos, width);
+        assert_eq!(pos.ypos, 216);
+        assert_eq!(pos.width, width);
+        assert_eq!(pos.height, 288);
+        assert_eq!(pos.crop_right, 710); // width - 10
+        assert_eq!(pos.crop_left, 0);
+    }
 
     fn wait(bus: &gst::Bus) -> bool {
         for msg in bus.iter_timed(gst::ClockTime::SECOND) {

@@ -148,7 +148,7 @@ impl Status {
         let viewport_offset_x = self.offset_x - (viewport_width - self.width) / 2;
         let viewport_offset_y = self.offset_y - (viewport_height - self.height) / 2;
 
-        let mut pos0 = Position {
+        let pos0 = Position {
             xpos: if viewport_offset_x < self.border {
                 viewport_offset_x
             } else {
@@ -183,7 +183,7 @@ impl Status {
             crop_left: 0,
         };
 
-        let mut pos1 = Position {
+        let pos1 = Position {
             xpos: if viewport_offset_x > self.border {
                 viewport_offset_x
             } else {
@@ -223,17 +223,6 @@ impl Status {
                 }
             },
         };
-
-        // workaround to handle gst issue when width=0 with video mixers (see commit msg)
-        if pos0.width == 0 {
-            pos0.width = self.width;
-            pos0.xpos = self.width;
-        }
-
-        if pos1.width == 0 {
-            pos1.width = self.width;
-            pos1.xpos = self.width;
-        }
 
         (pos0, pos1)
     }
@@ -331,9 +320,9 @@ mod tests {
         assert_eq!(pos0.crop_right, 0);
         assert_eq!(pos0.crop_left, 0);
 
-        assert_eq!(pos1.xpos, WIDTH);
+        assert_eq!(pos1.xpos, HALF_WIDTH);
         assert_eq!(pos1.ypos, 0);
-        assert_eq!(pos1.width, WIDTH);
+        assert_eq!(pos1.width, 0);
         assert_eq!(pos1.height, HEIGHT);
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, WIDTH);
@@ -352,9 +341,9 @@ mod tests {
         assert_eq!(status.width, WIDTH);
         assert_eq!(status.height, HEIGHT);
 
-        assert_eq!(pos0.xpos, WIDTH);
+        assert_eq!(pos0.xpos, 0);
         assert_eq!(pos0.ypos, 0);
-        assert_eq!(pos0.width, WIDTH);
+        assert_eq!(pos0.width, 0);
         assert_eq!(pos0.height, HEIGHT);
         assert_eq!(pos0.crop_right, WIDTH);
         assert_eq!(pos0.crop_left, 0);
@@ -575,9 +564,9 @@ mod tests {
         assert_eq!(status.width, WIDTH);
         assert_eq!(status.height, HEIGHT);
 
-        assert_eq!(pos0.xpos, WIDTH);
+        assert_eq!(pos0.xpos, 0);
         assert_eq!(pos0.ypos, 216);
-        assert_eq!(pos0.width, WIDTH);
+        assert_eq!(pos0.width, 0);
         assert_eq!(pos0.height, 288);
         assert_eq!(pos0.crop_right, 1280);
         assert_eq!(pos0.crop_left, 0);
