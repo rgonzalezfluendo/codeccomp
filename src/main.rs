@@ -41,8 +41,8 @@ struct MouseState {
 
 fn update_mixer(
     status: Status,
-    mixer_sink_0_pad: gst::Pad,
-    mixer_sink_1_pad: gst::Pad,
+    mixer_sink_0_pad: &gst::Pad,
+    mixer_sink_1_pad: &gst::Pad,
     crop0: &gst::Element,
     crop1: &gst::Element,
     compositor_supports_crop: bool,
@@ -133,20 +133,15 @@ fn main() -> Result<(), anyhow::Error> {
 
     update_mixer(
         *status.lock().unwrap(),
-        mixer_sink_0_pad,
-        mixer_sink_1_pad,
+        &mixer_sink_0_pad,
+        &mixer_sink_1_pad,
         &crop0,
         &crop1,
         compositor_supports_crop,
     );
 
-    let mixer_sink_0_pad_weak = mixer.static_pad("sink_0").unwrap().downgrade();
-    let mixer_sink_1_pad_weak = mixer.static_pad("sink_1").unwrap().downgrade();
-
     // Probe added in the sink pad to get direct navigation events w/o transformation done by the zoom_mixer
     mixer_src_pad.add_probe(gst::PadProbeType::EVENT_UPSTREAM, move |_, probe_info| {
-        let mixer_sink_0_pad = mixer_sink_0_pad_weak.upgrade().unwrap();
-        let mixer_sink_1_pad = mixer_sink_1_pad_weak.upgrade().unwrap();
         let mut status = status.lock().unwrap();
 
         let Some(ev) = probe_info.event() else {
@@ -253,8 +248,8 @@ fn main() -> Result<(), anyhow::Error> {
         //TODO only update if needed
         update_mixer(
             *status,
-            mixer_sink_0_pad,
-            mixer_sink_1_pad,
+            &mixer_sink_0_pad,
+            &mixer_sink_1_pad,
             &crop0,
             &crop1,
             compositor_supports_crop,
