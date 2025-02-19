@@ -165,6 +165,9 @@ fn main() -> Result<(), anyhow::Error> {
                     status.zoom_out();
                 }
                 "r" => {
+                    status.reset_position();
+                }
+                "Shift_R" => {
                     status.reset();
                 }
                 "1" => {

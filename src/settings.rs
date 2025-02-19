@@ -8,7 +8,7 @@ const FRAMERATE: &str = "30/1";
 #[derive(Debug, Deserialize, PartialEq)]
 #[allow(unused)]
 #[derive(Default)]
-enum InputType {
+pub enum InputType {
     #[default]
     Test,
     Camera,
@@ -71,9 +71,10 @@ impl Default for Encoder {
     }
 }
 fn default_enc0() -> Encoder {
-    let mut encoder0 = Encoder::default();
-    encoder0.bitrate = 256;
-    encoder0
+    Encoder {
+        bitrate: 256,
+        ..Default::default()
+    }
 }
 
 #[derive(Debug, Deserialize)]
