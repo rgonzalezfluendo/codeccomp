@@ -3,18 +3,15 @@ use serde_derive::Deserialize;
 
 const WIDTH: i32 = 1280;
 const HEIGHT: i32 = 720;
-const FRAMERATE: &'static str = "30/1";
+const FRAMERATE: &str = "30/1";
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[allow(unused)]
+#[derive(Default)]
 enum InputType {
+    #[default]
     Test,
     Camera,
-}
-impl Default for InputType {
-    fn default() -> Self {
-        InputType::Test
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,7 +91,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         let input = Input::default();
-        let mut encoder0 = default_enc0();
+        let encoder0 = default_enc0();
         let encoder1 = Encoder::default();
         let output = true;
 
@@ -121,7 +118,7 @@ impl Settings {
         let height = self.input.height;
         let framerate = &self.input.framerate;
 
-        let pipeline_src_srt = if self.input.is_test() {
+        if self.input.is_test() {
             // pattern=smpte
             let pattern = self
                 .input
@@ -134,9 +131,7 @@ impl Settings {
         } else {
             //TODO no fix caps use generic
             format!("v4l2src ! image/jpeg, width={width}, height={height}, framerate={framerate} ! jpegdec ! videoconvertscale ! videorate ")
-        };
-
-        pipeline_src_srt
+        }
     }
 
     pub fn get_pipeline_enc0(&self) -> String {

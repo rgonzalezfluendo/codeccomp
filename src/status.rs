@@ -72,8 +72,8 @@ impl Status {
     /// Moves the viewport by `x_step` pixels horizontally and `y_step` pixels vertically.
     /// Does not clamp the values, allowing offsets to exceed valid bounds.
     pub fn move_pos(&mut self, x_step: i32, y_step: i32) {
-        self.offset_x = self.offset_x + x_step;
-        self.offset_y = self.offset_y + y_step;
+        self.offset_x += x_step;
+        self.offset_y += y_step;
     }
 
     /// Set offset_x and offset_y
@@ -202,12 +202,10 @@ impl Status {
                     } else {
                         0
                     }
+                } else if self.border < viewport_offset_x {
+                    viewport_width
                 } else {
-                    if self.border < viewport_offset_x {
-                        viewport_width
-                    } else {
-                        viewport_width - self.border + viewport_offset_x
-                    }
+                    viewport_width - self.border + viewport_offset_x
                 }
             },
             height: viewport_height,

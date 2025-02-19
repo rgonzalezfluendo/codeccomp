@@ -32,7 +32,7 @@ use settings::Settings;
 use status::Status;
 use std::sync::Mutex;
 
-const HELP: &'static str = r#"
+const HELP: &str = r#"
 User can change the video showed using the next keys:
  * 1: Only first video
  * 2: Only second video
