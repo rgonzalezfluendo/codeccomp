@@ -3,29 +3,6 @@
 // TODO add copyright
 //
 
-/*
-TODOs:
-[x] Allow move border or show only one video
-[x] border fixed when zoom
-[x] simple configure sources
-[x] refactor mixer with a status (center_x, center_y, zoom, border)
-[x] zoom_in_center_at
-[x] status with any resolution
-[x] config toml file
-[x] full configure sources
-[x] configure encoders
-[ ] Bandwidth metrics
-[ ] latency metrics
-[ ] PSNR vs. SSIM metrics
-[ ] Windows support
-[ ] osX support
-[ ] Fake sink
-[ ] Readme
-[x] GST_DEBUG_DUMP_DOT_DIR support
-[ ] create compositor backend: compositor, vacompositor, glvideomixer (crop-right), Windows?
-[ ] create tests for compositor backend
- */
-
 mod settings;
 mod status;
 
@@ -62,24 +39,50 @@ struct MouseState {
     clicked_ypos: i32,
 }
 
-fn update_mixer(mixer_sink_0_pad: gst::Pad, mixer_sink_1_pad: gst::Pad, status: Status) {
+fn update_mixer(
+    status: Status,
+    mixer_sink_0_pad: gst::Pad,
+    mixer_sink_1_pad: gst::Pad,
+    crop0: &gst::Element,
+    crop1: &gst::Element,
+    compositor_supports_crop: bool,
+) {
     let (pos0, pos1) = status.get_positions();
 
-    mixer_sink_0_pad.set_properties(&[
-        ("width", &pos0.width),
-        ("height", &pos0.height),
-        ("xpos", &pos0.xpos),
-        ("ypos", &pos0.ypos),
-        ("crop-right", &pos0.crop_right),
-    ]);
+    if compositor_supports_crop {
+        mixer_sink_0_pad.set_properties(&[
+            ("width", &pos0.width),
+            ("height", &pos0.height),
+            ("xpos", &pos0.xpos),
+            ("ypos", &pos0.ypos),
+            ("crop-right", &pos0.crop_right),
+        ]);
 
-    mixer_sink_1_pad.set_properties(&[
-        ("width", &pos1.width),
-        ("height", &pos1.height),
-        ("xpos", &pos1.xpos),
-        ("ypos", &pos1.ypos),
-        ("crop-left", &pos1.crop_left),
-    ]);
+        mixer_sink_1_pad.set_properties(&[
+            ("width", &pos1.width),
+            ("height", &pos1.height),
+            ("xpos", &pos1.xpos),
+            ("ypos", &pos1.ypos),
+            ("crop-left", &pos1.crop_left),
+        ]);
+    } else {
+        mixer_sink_0_pad.set_properties(&[
+            ("width", &pos0.width),
+            ("height", &pos0.height),
+            ("xpos", &pos0.xpos),
+            ("ypos", &pos0.ypos),
+        ]);
+
+        mixer_sink_1_pad.set_properties(&[
+            ("width", &pos1.width),
+            ("height", &pos1.height),
+            ("xpos", &pos1.xpos),
+            ("ypos", &pos1.ypos),
+        ]);
+
+        crop0.set_property("right", pos0.crop_right);
+        crop1.set_property("left", pos1.crop_left);
+    }
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -99,6 +102,8 @@ fn main() -> Result<(), anyhow::Error> {
     let enc0 = settings.get_pipeline_enc0();
     let enc1 = settings.get_pipeline_enc1();
     let sink = settings.get_pipeline_sink();
+    let compositor = settings.get_pipeline_compositor();
+    let compositor_supports_crop: bool = settings.gst_pipeline_compositor_supports_crop();
 
     //TODO(-100) handle no opengl pipelines with compositor and videotestsrc
     //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
@@ -106,10 +111,10 @@ fn main() -> Result<(), anyhow::Error> {
         r#"
         {src} ! queue ! tee name=tee_src
         tee_src.src_0 ! queue name=enc0 ! {enc0} ! queue name=dec0 !
-        decodebin3 ! queue name=end0 ! mix.sink_0
+        decodebin3 ! videocrop name=crop0 ! queue name=end0 ! mix.sink_0
         tee_src.src_1 ! queue name=enc1 ! {enc1} ! queue name=dec1 !
-        decodebin3 ! queue name=end1 ! mix.sink_1
-        glvideomixer name=mix  !
+        decodebin3 ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
+        {compositor} name=mix  !
         {sink}
     "#
     );
@@ -120,11 +125,20 @@ fn main() -> Result<(), anyhow::Error> {
         .unwrap();
 
     let mixer = pipeline.by_name("mix").unwrap();
+    let crop0 = pipeline.by_name("crop0").unwrap();
+    let crop1 = pipeline.by_name("crop1").unwrap();
     let mixer_src_pad = mixer.static_pad("src").unwrap();
     let mixer_sink_0_pad = mixer.static_pad("sink_0").unwrap();
     let mixer_sink_1_pad = mixer.static_pad("sink_1").unwrap();
 
-    update_mixer(mixer_sink_0_pad, mixer_sink_1_pad, *status.lock().unwrap());
+    update_mixer(
+        *status.lock().unwrap(),
+        mixer_sink_0_pad,
+        mixer_sink_1_pad,
+        &crop0,
+        &crop1,
+        compositor_supports_crop,
+    );
 
     let mixer_sink_0_pad_weak = mixer.static_pad("sink_0").unwrap().downgrade();
     let mixer_sink_1_pad_weak = mixer.static_pad("sink_1").unwrap().downgrade();
@@ -237,7 +251,14 @@ fn main() -> Result<(), anyhow::Error> {
         }
 
         //TODO only update if needed
-        update_mixer(mixer_sink_0_pad, mixer_sink_1_pad, *status);
+        update_mixer(
+            *status,
+            mixer_sink_0_pad,
+            mixer_sink_1_pad,
+            &crop0,
+            &crop1,
+            compositor_supports_crop,
+        );
 
         gst::PadProbeReturn::Ok
     });
@@ -268,7 +289,7 @@ fn main() -> Result<(), anyhow::Error> {
         };
     }
 
-    if let Ok(_) = std::env::var("GST_DEBUG_DUMP_DOT_DIR").as_deref()  {
+    if std::env::var("GST_DEBUG_DUMP_DOT_DIR").as_deref().is_ok() {
         pipeline.debug_to_dot_file(gst::DebugGraphDetails::all(), "codeccomp");
     }
 

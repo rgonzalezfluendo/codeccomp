@@ -1,6 +1,18 @@
 # Video Codecs comparator
 
 
+## TODOs:
+
+ * [ ] Bandwidth metrics
+ * [ ] latency metrics
+ * [ ] PSNR vs. SSIM metrics
+ * [ ] Windows support
+ * [ ] osX support
+ * [ ] Fake sink
+ * [ ] Readme
+ * [ ] create compositor backend: compositor, vacompositor, glvideomixer (crop-right), Windows?
+ * [ ] create tests for compositor backend
+
 ## GStreamer issues
 
 ### glvideomixer sink_0::width=0
@@ -52,3 +64,8 @@ Issue with libva/mesa?
 ```
 
 Note issue only with `avdec_h264`. With `vah264dec` and `GST_VIDEO_CROP_META_API_TYPE` patch vacompositor works correctly.
+
+
+## decodebin3 ! videocrop ! vacompositor uses avdec_h264
+
+TODO

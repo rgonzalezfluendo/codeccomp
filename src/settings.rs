@@ -5,8 +5,19 @@ const WIDTH: i32 = 1280;
 const HEIGHT: i32 = 720;
 const FRAMERATE: &str = "30/1";
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Deserialize, PartialEq)]
-#[allow(unused)]
+#[derive(Default)]
+pub enum BackendType {
+    #[default]
+    GL,
+    VAAPI,
+    CPU,
+    D3D11,
+    D3D12,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
 #[derive(Default)]
 pub enum InputType {
     #[default]
@@ -15,7 +26,6 @@ pub enum InputType {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(unused)]
 pub struct Input {
     pub width: i32,
     pub height: i32,
@@ -47,7 +57,8 @@ impl Input {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize)]
+#[derive(Default)]
 pub enum EncoderType {
     #[default]
     x264enc,
@@ -57,7 +68,6 @@ pub enum EncoderType {
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(unused)]
 pub struct Encoder {
     pub kind: EncoderType,
     pub bitrate: u32,
@@ -87,6 +97,8 @@ pub struct Settings {
     #[serde(default)]
     pub encoder1: Encoder,
     #[serde(default)]
+    pub backend: BackendType,
+    #[serde(default)]
     pub output: bool,
 }
 impl Default for Settings {
@@ -94,12 +106,14 @@ impl Default for Settings {
         let input = Input::default();
         let encoder0 = default_enc0();
         let encoder1 = Encoder::default();
+        let backend = BackendType::default();
         let output = true;
 
         Self {
             input,
             encoder0,
             encoder1,
+            backend,
             output,
         }
     }
@@ -158,6 +172,30 @@ impl Settings {
             EncoderType::h266enc => {
                 unimplemented!();
             }
+        }
+    }
+
+    pub fn get_pipeline_compositor(&self) -> &str {
+        match self.backend {
+            BackendType::GL => "glvideomixer",
+            BackendType::VAAPI => "vacompositor",
+            BackendType::CPU => "compositor",
+            BackendType::D3D11 => {
+                unimplemented!();
+            }
+            BackendType::D3D12 => {
+                unimplemented!();
+            }
+        }
+    }
+
+    pub fn gst_pipeline_compositor_supports_crop(&self) -> bool {
+        match self.backend {
+            BackendType::GL => {
+                // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/2669
+                true
+            }
+            _ => false,
         }
     }
 
