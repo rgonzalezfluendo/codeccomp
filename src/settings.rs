@@ -99,7 +99,9 @@ pub struct Settings {
     #[serde(default)]
     pub backend: BackendType,
     #[serde(default)]
-    pub output: bool,
+    pub nooutput: bool,
+    #[serde(default)]
+    pub debug: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -107,14 +109,14 @@ impl Default for Settings {
         let encoder0 = default_enc0();
         let encoder1 = Encoder::default();
         let backend = BackendType::default();
-        let output = true;
 
         Self {
             input,
             encoder0,
             encoder1,
             backend,
-            output,
+            nooutput: false,
+            debug: false,
         }
     }
 }
@@ -202,6 +204,12 @@ impl Settings {
     pub fn get_pipeline_sink(&self) -> String {
         let width = self.input.width;
         let height = self.input.height;
-        format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! xvimagesink sync=false")
+        if self.nooutput {
+            format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! fakesink sync=false")
+        } else if self.debug {
+            format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! fpsdisplaysink video-sink=xvimagesink sync=false")
+        } else {
+            format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! xvimagesink sync=false")
+        }
     }
 }

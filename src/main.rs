@@ -90,8 +90,10 @@ fn main() -> Result<(), anyhow::Error> {
 
     gst::init()?;
 
-    //TODO delete msg
     println!("Hello, video codec comparator\n{HELP}");
+    if settings.debug {
+        println!("settings:\n{:#?}", settings);
+    }
 
     let state = Mutex::new(MouseState::default());
     let status = Mutex::new(Status::new(settings.input.width, settings.input.height));
@@ -119,6 +121,11 @@ fn main() -> Result<(), anyhow::Error> {
     "#
     );
 
+    if settings.debug {
+        println!("pipeline:\n{}", &pipeline_srt);
+    }
+
+    // decodebin3 ! "video/x-raw(memory:VAMemory)"
     let pipeline = gst::parse::launch(&pipeline_srt)
         .unwrap()
         .downcast::<gst::Pipeline>()
