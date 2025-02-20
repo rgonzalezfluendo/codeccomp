@@ -160,7 +160,7 @@ impl Settings {
         let bitrate = enc.bitrate;
         match enc.kind {
             EncoderType::x264enc => {
-                format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120")
+                format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4")  // constrained-baseline
             }
             EncoderType::x265enc => {
                 format!("x265enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast key-int-max=2560")

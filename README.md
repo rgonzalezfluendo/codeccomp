@@ -125,6 +125,26 @@ gst-launch-1.0  gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=1000
 WARNING: erroneous pipeline: could not link queue0 to videocrop0 with caps video/x-raw, format=(string)Y444
 ```
 
-## decodebin3 ! videocrop ! vacompositor uses avdec_h264
+## GStreamer note
 
-TODO
+### decodebin3 ! videocrop ! vacompositor uses avdec_h264
+
+
+```
+gst-launch-1.0  gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=50 !  "video/x-raw(memory:GLMemory), width=1280, height=720" ! glcolorconvert ! gldownload ! queue ! x264enc tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! decodebin3 ! videocrop right=640 ! m.sink_0 vacompositor name=m sink_0::width=704 sink_0::height=792 sink_0::xpos=-64 sink_0::ypos=-36 ! "video/x-raw, width=1280, height=720" ! xvimagesink
+```
+
+From logs
+```
+0:00:00.204321455 3677690 0x75155c000da0 LOG             decodebin3 gstdecodebin3.c:929:check_parser_caps_filter: Trying factory 2 vah264dec
+0:00:00.204339375 3677690 0x75155c000da0 LOG             decodebin3 gstdecodebin3.c:942:check_parser_caps_filter:<decodebin3-0> Can NOT intersect video/x-h264, alignment=(string)au, stream-format=(string)byte-stream, parsed=(boolean)true, level=(string)3.1, profile=(string)high-4:4:4, width=(int)1280, height=(int)720, pixel-aspect-ratio=(fraction)1/1, framerate=(fraction)30/1, interlace-mode=(string)progressive, colorimetry=(string)bt709, chroma-site=(string)mpeg2, coded-picture-structure=(string)frame, chroma-format=(string)4:4:4, bit-depth-luma=(uint)8, bit-depth-chroma=(uint)8, lcevc=(boolean)false with video/x-h264, profile=(string){ constrained-baseline, baseline, main, extended, high, progressive-high, constrained-high }, width=(int)[ 1, 4096 ], height=(int)[ 1, 4096 ], alignment=(string)au, stream-format=(string){ avc, avc3, byte-stream }
+```
+
+Note: profile=high-4:4:4 vs profile=(string){ constrained-baseline, baseline, main, extended, high, progressive-high, constrained-high } supported by vah264
+
+Solution add format before the x264enc or profile after it
+```
+gst-launch-1.0  gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=50 !  "video/x-raw(memory:GLMemory), width=1280, height=720" ! glcolorconvert ! gldownload ! queue ! video/x-raw,format=I420 ! x264enc tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! decodebin3 ! videocrop right=640 ! m.sink_0 vacompositor name=m sink_0::width=704 sink_0::height=792 sink_0::xpos=-64 sink_0::ypos=-36 ! "video/x-raw, width=1280, height=720" ! xvimagesink
+or
+gst-launch-1.0  gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=50 !  "video/x-raw(memory:GLMemory), width=1280, height=720" ! glcolorconvert ! gldownload ! queue ! x264enc tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=constrained-baseline ! decodebin3 ! videocrop right=640 ! m.sink_0 vacompositor name=m sink_0::width=704 sink_0::height=792 sink_0::xpos=-64 sink_0::ypos=-36 ! "video/x-raw, width=1280, height=720" ! xvimagesink
+```
