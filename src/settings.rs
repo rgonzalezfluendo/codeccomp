@@ -23,11 +23,23 @@ pub enum InputType {
     Camera,
 }
 
+fn default_framerate() -> String {
+    "30/1".to_string()
+}
+fn default_width() -> i32 {
+    1280
+}
+fn default_height() -> i32 {
+    720
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Input {
+    #[serde(default = "default_width")]
     pub width: i32,
+    #[serde(default = "default_height")]
     pub height: i32,
-    #[serde(default)]
+    #[serde(default = "default_framerate")]
     pub framerate: String,
     #[serde(default)]
     pub input: InputType,
@@ -64,16 +76,20 @@ pub enum EncoderType {
     h266enc,
 }
 
+fn default_bitrate() -> u32 {
+    2048
+}
 #[derive(Debug, Deserialize)]
 pub struct Encoder {
     pub kind: EncoderType,
+    #[serde(default = "default_bitrate")]
     pub bitrate: u32,
 }
 impl Default for Encoder {
     fn default() -> Self {
         Self {
             kind: EncoderType::default(),
-            bitrate: 2048,
+            bitrate: default_bitrate(),
         }
     }
 }
