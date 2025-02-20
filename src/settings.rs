@@ -217,12 +217,13 @@ impl Settings {
     pub fn get_pipeline_sink(&self) -> String {
         let width = self.input.width;
         let height = self.input.height;
+        let framerate = &self.input.framerate;
         if self.nooutput {
-            format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! fakesink sync=false")
+            format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1 ! fakesink sync=false")
         } else if self.debug {
-            format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! fpsdisplaysink video-sink=xvimagesink sync=false")
+            format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1 ! fpsdisplaysink video-sink=xvimagesink sync=false")
         } else {
-            format!("video/x-raw,framerate=30/1,width={width}, height={height}, pixel-aspect-ratio=1/1 ! xvimagesink sync=false")
+            format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1 ! xvimagesink sync=false")
         }
     }
 }
