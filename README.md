@@ -73,6 +73,8 @@ Issue with libva/mesa?
 Note issue only with `avdec_h264`. With `vah264dec` and `GST_VIDEO_CROP_META_API_TYPE` patch vacompositor works correctly.
 
 
+Note issue only with `video/x-raw,format=Y444`. `video/x-raw,format=I420` fixes it.
+
 ### compositor and vacompositor video out of the box
 
 with vacompositor
