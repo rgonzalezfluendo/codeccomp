@@ -1,14 +1,21 @@
 # Video Codecs comparator
 
+## Links
+
+* https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/8537
 
 ## TODOs:
 
+ * [ ] identity encoder
+ * [ ] side by side preview mode
  * [ ] Bandwidth metrics
  * [ ] latency metrics
- * [ ] PSNR vs. SSIM metrics
+ * [ ] PSNR and SSIM metrics
+ + [ ] VMAF metrics
  * [ ] Windows support
- * [ ] osX support
+ * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
+ * [ ] a new onlydecodebin without queues (parsebin and multiqueue from decodebin3 are not needed)
 
 ## GStreamer issues
 
@@ -39,7 +46,6 @@ or w/o enc/dec
 ```
 GST_DEBUG="*glvideomixer*:8" gst-launch-1.0  gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=1000 !  "video/x-raw(memory:GLMemory), width=1280, height=720" ! glcolorconvert ! gldownload ! queue ! video/x-raw,format=Y444 ! videocrop right=640 ! m.sink_0 vacompositor name=m sink_0::width=704 sink_0::height=792 sink_0::xpos=-64 sink_0::ypos=-36 ! "video/x-raw, width=1280, height=720" ! xvimagesink
 ```
-
 
 
 Issue with libva/mesa?
@@ -74,6 +80,8 @@ Note issue only with `avdec_h264`. With `vah264dec` and `GST_VIDEO_CROP_META_API
 
 
 Note issue only with `video/x-raw,format=Y444`. `video/x-raw,format=I420` fixes it.
+
+https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/4245
 
 ### compositor and vacompositor video out of the box
 
