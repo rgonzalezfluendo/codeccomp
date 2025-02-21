@@ -69,6 +69,7 @@ impl Input {
 #[allow(non_camel_case_types)]
 #[derive(Debug, Deserialize, Default)]
 pub enum EncoderType {
+    identity,
     #[default]
     x264enc,
     x265enc,
@@ -175,6 +176,9 @@ impl Settings {
     fn get_pipeline_enc(&self, enc: &Encoder) -> String {
         let bitrate = enc.bitrate;
         match enc.kind {
+            EncoderType::identity => {
+                "identity".to_string()
+            }
             EncoderType::x264enc => {
                 format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4")  // constrained-baseline
             }
@@ -227,3 +231,6 @@ impl Settings {
         }
     }
 }
+
+
+// TODO: do settings.rs GStreamer agnostic
