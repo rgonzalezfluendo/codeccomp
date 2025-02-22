@@ -1,26 +1,40 @@
-# Video Codecs comparator
+# Video Codecs Comparator
+
+![screenshot.png](./doc/screenshot.png)
+
+
+Simple:
+
+ * Simple is better than complex.
+ * No UI (Only Gstreamer NavigationEvent)
+ * Only one pipeline (sorry for the strings algebra)
+
+![pipeline.png](./doc/pipeline.png)
+
 
 ## Links
 
 * https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/8537
+* https://gitlab.gnome.org/YaLTeR/identity
+* https://github.com/IENT/YUView
 
 ## TODOs:
 
  * [ ] Bandwidth metrics
  * [ ] latency metrics
  * [ ] PSNR and SSIM metrics
- + [ ] VMAF metrics
+ * [ ] VMAF metrics
  * [ ] Windows support
  * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
  * [ ] more tour test with identity encoder and 8x8 input with real assert of the output
- * [ ] Add vulan backend `vulkanoverlaycompositor`
 
 
 ## Future TODOs:
 
  * [ ] Move logic to GStremaer elements (like a `smartcompositor`)
  * [ ] a new `onlydecodebin` without queues (parsebin and multiqueue from decodebin3 are not needed)
+ * [ ] Add vulan backend. Check `vulkanoverlaycompositor`
 
 
 ## GStreamer issues
