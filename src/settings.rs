@@ -113,6 +113,8 @@ pub struct Settings {
     #[serde(default)]
     pub backend: BackendType,
     #[serde(default)]
+    pub sidebyside: bool,
+    #[serde(default)]
     pub nooutput: bool,
     #[serde(default)]
     pub debug: bool,
@@ -129,6 +131,7 @@ impl Default for Settings {
             encoder0,
             encoder1,
             backend,
+            sidebyside: false,
             nooutput: false,
             debug: false,
         }
@@ -176,11 +179,10 @@ impl Settings {
     fn get_pipeline_enc(&self, enc: &Encoder) -> String {
         let bitrate = enc.bitrate;
         match enc.kind {
-            EncoderType::identity => {
-                "identity".to_string()
-            }
+            EncoderType::identity => "identity".to_string(),
             EncoderType::x264enc => {
-                format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4")  // constrained-baseline
+                format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4")
+                // constrained-baseline
             }
             EncoderType::x265enc => {
                 format!("x265enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast key-int-max=2560")
@@ -231,6 +233,5 @@ impl Settings {
         }
     }
 }
-
 
 // TODO: do settings.rs GStreamer agnostic

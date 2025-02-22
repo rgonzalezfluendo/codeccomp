@@ -3,14 +3,14 @@
 // TODO add copyright
 //
 
+mod compositor;
 mod pipeline;
 mod settings;
-mod compositor;
 
+use compositor::Compositor;
 use gst::prelude::*;
 use gst_video::video_event::NavigationEvent;
 use settings::Settings;
-use compositor::Compositor;
 use std::sync::Mutex;
 
 const HELP: &str = r#"
@@ -52,7 +52,16 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     let state = Mutex::new(MouseState::default());
-    let compositor = Mutex::new(Compositor::new(settings.input.width, settings.input.height));
+    let compositor_mode = if settings.sidebyside {
+        compositor::Mode::SideBySide
+    } else {
+        compositor::Mode::Split
+    };
+    let compositor = Mutex::new(Compositor::new(
+        compositor_mode,
+        settings.input.width,
+        settings.input.height,
+    ));
 
     gst::init().unwrap();
     let pipeline_srt = pipeline::get_srt(settings);
@@ -122,19 +131,27 @@ fn main() -> Result<(), anyhow::Error> {
                     compositor.reset();
                 }
                 "1" => {
+                    compositor.split_mode();
                     compositor.move_border_to(0);
                 }
                 "2" => {
+                    compositor.split_mode();
                     let w = compositor.width;
                     compositor.move_border_to(w);
                 }
                 "3" => {
+                    compositor.split_mode();
                     compositor.reset_border();
                 }
                 "4" => {
-                    compositor.move_border(-10);
+                    compositor.side_by_side_mode();
                 }
                 "5" => {
+                    compositor.split_mode();
+                    compositor.move_border(-10);
+                }
+                "6" => {
+                    compositor.split_mode();
                     compositor.move_border(10);
                 }
                 _ => (),

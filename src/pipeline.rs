@@ -1,6 +1,6 @@
 use crate::compositor::Position;
-use crate::Settings;
 use crate::Compositor;
+use crate::Settings;
 
 use gst::prelude::*;
 
@@ -178,7 +178,7 @@ mod tests {
         let mut settings = Settings::default();
         settings.backend = backend;
         let compositor_supports_crop: bool = settings.gst_pipeline_compositor_supports_crop();
-        let mut compositor = Compositor::new(settings.input.width, settings.input.height);
+        let mut compositor = Compositor::new_split(settings.input.width, settings.input.height);
 
         //TODO refactor this logic with main
 
