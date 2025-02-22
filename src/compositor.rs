@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Status {
+pub struct Compositor {
     pub zoom: usize,
     pub offset_x: i32,
     pub offset_y: i32,
@@ -23,7 +23,7 @@ const WIDTH: i32 = 1280;
 const HEIGHT: i32 = 720;
 const HALF_WIDTH: i32 = WIDTH / 2;
 
-impl Default for Status {
+impl Default for Compositor {
     fn default() -> Self {
         Self {
             zoom: 100,
@@ -36,7 +36,7 @@ impl Default for Status {
     }
 }
 
-impl Status {
+impl Compositor {
     pub fn new(width: i32, height: i32) -> Self {
         Self {
             width,
@@ -48,7 +48,7 @@ impl Status {
 
     /// Reset default values
     pub fn reset(&mut self) {
-        let d = Status::default();
+        let d = Compositor::default();
         self.zoom = d.zoom;
         self.offset_x = d.offset_x;
         self.offset_y = d.offset_y;
@@ -57,13 +57,13 @@ impl Status {
 
     /// Reset only border to default values
     pub fn reset_border(&mut self) {
-        let d = Status::default();
+        let d = Compositor::default();
         self.border = d.border;
     }
 
     /// Reset only border to default values
     pub fn reset_position(&mut self) {
-        let d = Status::default();
+        let d = Compositor::default();
         self.zoom = d.zoom;
         self.offset_x = d.offset_x;
         self.offset_y = d.offset_y;
@@ -140,7 +140,7 @@ impl Status {
         }
     }
 
-    /// Calculates the two `Position`s for the input videos based on the status values
+    /// Calculates the two `Position`s for the input videos based on the compositor values
     pub fn get_positions(&self) -> (Position, Position) {
         let zoom_factor = (self.zoom as f32) / 100.0;
         let viewport_width = (self.width as f32 * zoom_factor) as i32;
@@ -233,21 +233,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_status_default() {
-        let status = Status::default();
+    fn test_compositor_default() {
+        let compositor = Compositor::default();
 
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
     }
 
     #[test]
     fn test_get_positions_default() {
-        let status = Status::default();
-        let (pos0, pos1) = status.get_positions();
+        let compositor = Compositor::default();
+        let (pos0, pos1) = compositor.get_positions();
 
         assert_eq!(pos0.xpos, 0);
         assert_eq!(pos0.ypos, 0);
@@ -266,16 +266,16 @@ mod tests {
 
     #[test]
     fn test_move_pos_left() {
-        let mut status = Status::default();
-        status.move_pos(-10, 0);
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.move_pos(-10, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, -10);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, -10);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, -10);
         assert_eq!(pos0.ypos, 0);
@@ -291,27 +291,27 @@ mod tests {
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, HALF_WIDTH + 10);
 
-        status.reset_position();
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        compositor.reset_position();
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
     }
 
     #[test]
     fn test_move_pos_left_out_of_border() {
-        let mut status = Status::default();
-        status.move_pos(-1000, 0);
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.move_pos(-1000, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, -1000);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, -1000);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, -1000);
         assert_eq!(pos0.ypos, 0);
@@ -330,16 +330,16 @@ mod tests {
 
     #[test]
     fn test_move_pos_right_out_of_border() {
-        let mut status = Status::default();
-        status.move_pos(1000, 0);
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.move_pos(1000, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 1000);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 1000);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, 0);
         assert_eq!(pos0.ypos, 0);
@@ -358,16 +358,16 @@ mod tests {
 
     #[test]
     fn test_move_border_left() {
-        let mut status = Status::default();
-        status.move_border(10);
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.move_border(10);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH + 10);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH + 10);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, 0);
         assert_eq!(pos0.ypos, 0);
@@ -383,27 +383,27 @@ mod tests {
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, HALF_WIDTH + 10);
 
-        status.reset_position();
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH + 10);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        compositor.reset_position();
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH + 10);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
     }
 
     #[test]
     fn test_zoom_in() {
-        let mut status = Status::default();
-        status.zoom_in();
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.zoom_in();
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 110);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 110);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, -64);
         assert_eq!(pos0.ypos, -36);
@@ -422,21 +422,21 @@ mod tests {
 
     #[test]
     fn test_zoom_out_five_times() {
-        let mut status = Status::default();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, 384);
         assert_eq!(pos0.ypos, 216);
@@ -455,21 +455,21 @@ mod tests {
 
     #[test]
     fn test_zoom_out_five_times_and_move() {
-        let mut status = Status::default();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, 384);
         assert_eq!(pos0.ypos, 216);
@@ -486,38 +486,38 @@ mod tests {
         assert_eq!(pos1.crop_left, 640);
 
         let current_width = pos0.width + pos1.width;
-        status.move_pos(-10, 0);
-        let (pos0, pos1) = status.get_positions();
+        compositor.move_pos(-10, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, -10);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, -10);
         assert_eq!(pos0.width + pos1.width, current_width);
         assert_eq!(pos0.crop_right, 615);
         assert_eq!(pos1.crop_left, 665);
 
-        status.move_pos(-10, 0);
-        let (pos0, pos1) = status.get_positions();
+        compositor.move_pos(-10, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, -20);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, -20);
         assert_eq!(pos0.width + pos1.width, current_width);
         assert_eq!(pos0.crop_right, 590);
         assert_eq!(pos1.crop_left, 690);
 
-        status.move_pos(-10, 0);
-        let (pos0, pos1) = status.get_positions();
+        compositor.move_pos(-10, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, -30);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, -30);
         assert_eq!(pos0.width + pos1.width, current_width);
         assert_eq!(pos0.crop_right, 565);
         assert_eq!(pos1.crop_left, 715);
 
-        status.move_pos(-10, 0);
-        let (pos0, pos1) = status.get_positions();
+        compositor.move_pos(-10, 0);
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, -40);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, -40);
         assert_eq!(pos0.width + pos1.width, current_width);
         assert_eq!(pos0.crop_right, 540);
         assert_eq!(pos1.crop_left, 740);
@@ -525,21 +525,21 @@ mod tests {
 
     #[test]
     fn test_zoom_out_five_times_only_one_video() {
-        let mut status = Status::default();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        let (pos0, pos1) = status.get_positions();
+        let mut compositor = Compositor::default();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        let (pos0, pos1) = compositor.get_positions();
 
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, 384);
         assert_eq!(pos0.ypos, 216);
@@ -555,14 +555,14 @@ mod tests {
         assert_eq!(pos1.crop_right, 0);
         assert_eq!(pos1.crop_left, 640);
 
-        status.move_border_to(0);
-        let (pos0, pos1) = status.get_positions();
-        assert_eq!(status.zoom, 40);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, 0);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        compositor.move_border_to(0);
+        let (pos0, pos1) = compositor.get_positions();
+        assert_eq!(compositor.zoom, 40);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, 0);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
         assert_eq!(pos0.xpos, 0);
         assert_eq!(pos0.ypos, 216);
@@ -581,31 +581,31 @@ mod tests {
 
     #[test]
     fn test_zoom_inout_center_at() {
-        let mut status = Status::default();
-        status.zoom_in_center_at(0, 0);
+        let mut compositor = Compositor::default();
+        compositor.zoom_in_center_at(0, 0);
 
-        assert_eq!(status.zoom, 110);
-        assert_eq!(status.offset_x, 64);
-        assert_eq!(status.offset_y, 36);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        assert_eq!(compositor.zoom, 110);
+        assert_eq!(compositor.offset_x, 64);
+        assert_eq!(compositor.offset_y, 36);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
-        status.zoom_out_center_at(0, 0);
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        compositor.zoom_out_center_at(0, 0);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
 
-        status.zoom_out_center_at(0, 0);
-        assert_eq!(status.zoom, 90);
-        assert_eq!(status.offset_x, -64);
-        assert_eq!(status.offset_y, -36);
-        assert_eq!(status.border, HALF_WIDTH);
-        assert_eq!(status.width, WIDTH);
-        assert_eq!(status.height, HEIGHT);
+        compositor.zoom_out_center_at(0, 0);
+        assert_eq!(compositor.zoom, 90);
+        assert_eq!(compositor.offset_x, -64);
+        assert_eq!(compositor.offset_y, -36);
+        assert_eq!(compositor.border, HALF_WIDTH);
+        assert_eq!(compositor.width, WIDTH);
+        assert_eq!(compositor.height, HEIGHT);
     }
 
     #[test]
@@ -614,37 +614,37 @@ mod tests {
         let height = 7200;
         let half_width = 12800 / 2;
 
-        let mut status = Status::new(width, height);
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, half_width);
-        assert_eq!(status.width, width);
-        assert_eq!(status.height, height);
+        let mut compositor = Compositor::new(width, height);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, half_width);
+        assert_eq!(compositor.width, width);
+        assert_eq!(compositor.height, height);
 
-        status.zoom_in_center_at(0, 0);
+        compositor.zoom_in_center_at(0, 0);
 
-        assert_eq!(status.zoom, 110);
-        assert_eq!(status.offset_x, 640);
-        assert_eq!(status.offset_y, 360);
-        assert_eq!(status.border, half_width);
-        assert_eq!(status.width, width);
-        assert_eq!(status.height, height);
+        assert_eq!(compositor.zoom, 110);
+        assert_eq!(compositor.offset_x, 640);
+        assert_eq!(compositor.offset_y, 360);
+        assert_eq!(compositor.border, half_width);
+        assert_eq!(compositor.width, width);
+        assert_eq!(compositor.height, height);
 
-        status.zoom_out_center_at(0, 0);
-        assert_eq!(status.zoom, 100);
-        assert_eq!(status.offset_x, 0);
-        assert_eq!(status.offset_y, 0);
-        assert_eq!(status.border, half_width);
-        assert_eq!(status.width, width);
-        assert_eq!(status.height, height);
+        compositor.zoom_out_center_at(0, 0);
+        assert_eq!(compositor.zoom, 100);
+        assert_eq!(compositor.offset_x, 0);
+        assert_eq!(compositor.offset_y, 0);
+        assert_eq!(compositor.border, half_width);
+        assert_eq!(compositor.width, width);
+        assert_eq!(compositor.height, height);
 
-        status.zoom_out_center_at(0, 0);
-        assert_eq!(status.zoom, 90);
-        assert_eq!(status.offset_x, -640);
-        assert_eq!(status.offset_y, -360);
-        assert_eq!(status.border, half_width);
-        assert_eq!(status.width, width);
-        assert_eq!(status.height, height);
+        compositor.zoom_out_center_at(0, 0);
+        assert_eq!(compositor.zoom, 90);
+        assert_eq!(compositor.offset_x, -640);
+        assert_eq!(compositor.offset_y, -360);
+        assert_eq!(compositor.border, half_width);
+        assert_eq!(compositor.width, width);
+        assert_eq!(compositor.height, height);
     }
 }

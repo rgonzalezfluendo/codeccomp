@@ -1,6 +1,6 @@
-use crate::status::Position;
+use crate::compositor::Position;
 use crate::Settings;
-use crate::Status;
+use crate::Compositor;
 
 use gst::prelude::*;
 
@@ -54,17 +54,17 @@ fn fix_pos(pos: &mut Position, width: i32, compositor_supports_crop: bool) {
 }
 
 pub fn update_mixer(
-    status: &Status,
+    compositor: &Compositor,
     mixer_sink_0_pad: &gst::Pad,
     mixer_sink_1_pad: &gst::Pad,
     crop0: &gst::Element,
     crop1: &gst::Element,
     compositor_supports_crop: bool,
 ) {
-    let (mut pos0, mut pos1) = status.get_positions();
+    let (mut pos0, mut pos1) = compositor.get_positions();
 
-    fix_pos(&mut pos0, status.width, compositor_supports_crop);
-    fix_pos(&mut pos1, status.width, compositor_supports_crop);
+    fix_pos(&mut pos0, compositor.width, compositor_supports_crop);
+    fix_pos(&mut pos1, compositor.width, compositor_supports_crop);
 
     //TODO refactor avoid copy and paste
     if compositor_supports_crop {
@@ -178,7 +178,7 @@ mod tests {
         let mut settings = Settings::default();
         settings.backend = backend;
         let compositor_supports_crop: bool = settings.gst_pipeline_compositor_supports_crop();
-        let mut status = Status::new(settings.input.width, settings.input.height);
+        let mut compositor = Compositor::new(settings.input.width, settings.input.height);
 
         //TODO refactor this logic with main
 
@@ -196,9 +196,9 @@ mod tests {
         let mixer_sink_0_pad = mixer.static_pad("sink_0").unwrap();
         let mixer_sink_1_pad = mixer.static_pad("sink_1").unwrap();
 
-        let update_mixer_fn = |status: &Status| {
+        let update_mixer_fn = |compositor: &Compositor| {
             update_mixer(
-                status,
+                compositor,
                 &mixer_sink_0_pad,
                 &mixer_sink_1_pad,
                 &crop0,
@@ -215,82 +215,82 @@ mod tests {
         assert!(wait(&bus));
 
         //zoom in
-        status.zoom_in();
-        update_mixer_fn(&status);
+        compositor.zoom_in();
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
-        status.zoom_in();
-        update_mixer_fn(&status);
+        compositor.zoom_in();
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         //top left
-        status.move_pos(-30, -10);
-        status.zoom_in();
-        update_mixer_fn(&status);
+        compositor.move_pos(-30, -10);
+        compositor.zoom_in();
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         //bottom righ
-        status.move_pos(status.width, status.height);
-        update_mixer_fn(&status);
+        compositor.move_pos(compositor.width, compositor.height);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         //bottom left
-        status.move_pos(-1 * status.width, 34);
-        update_mixer_fn(&status);
+        compositor.move_pos(-1 * compositor.width, 34);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         //top rigth
-        status.move_pos(24, -1 * status.height);
-        update_mixer_fn(&status);
+        compositor.move_pos(24, -1 * compositor.height);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // zoom out
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        status.zoom_out();
-        update_mixer_fn(&status);
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        compositor.zoom_out();
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         //bottom left
-        status.move_pos(-110, -100);
-        update_mixer_fn(&status);
+        compositor.move_pos(-110, -100);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         //top rigth
-        status.move_pos(220, 200);
-        update_mixer_fn(&status);
+        compositor.move_pos(220, 200);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // 1
-        status.move_border_to(0);
-        update_mixer_fn(&status);
+        compositor.move_border_to(0);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // 2
-        let w = status.width;
-        status.move_border_to(w);
-        update_mixer_fn(&status);
+        let w = compositor.width;
+        compositor.move_border_to(w);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // 3
-        status.reset_border();
-        update_mixer_fn(&status);
+        compositor.reset_border();
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // 4
-        status.move_border(-40);
-        update_mixer_fn(&status);
+        compositor.move_border(-40);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // 5
-        status.move_border(10);
-        update_mixer_fn(&status);
+        compositor.move_border(10);
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         // reset
-        status.reset();
-        update_mixer_fn(&status);
+        compositor.reset();
+        update_mixer_fn(&compositor);
         assert!(wait(&bus));
 
         pipeline

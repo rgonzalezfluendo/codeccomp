@@ -5,12 +5,12 @@
 
 mod pipeline;
 mod settings;
-mod status;
+mod compositor;
 
 use gst::prelude::*;
 use gst_video::video_event::NavigationEvent;
 use settings::Settings;
-use status::Status;
+use compositor::Compositor;
 use std::sync::Mutex;
 
 const HELP: &str = r#"
@@ -52,7 +52,7 @@ fn main() -> Result<(), anyhow::Error> {
     }
 
     let state = Mutex::new(MouseState::default());
-    let status = Mutex::new(Status::new(settings.input.width, settings.input.height));
+    let compositor = Mutex::new(Compositor::new(settings.input.width, settings.input.height));
 
     gst::init().unwrap();
     let pipeline_srt = pipeline::get_srt(settings);
@@ -70,7 +70,7 @@ fn main() -> Result<(), anyhow::Error> {
     let mixer_sink_1_pad = mixer.static_pad("sink_1").unwrap();
 
     pipeline::update_mixer(
-        &status.lock().unwrap(),
+        &compositor.lock().unwrap(),
         &mixer_sink_0_pad,
         &mixer_sink_1_pad,
         &crop0,
@@ -80,8 +80,8 @@ fn main() -> Result<(), anyhow::Error> {
 
     // Probe added in the sink pad to get direct navigation events w/o transformation done by the zoom_mixer
     mixer_src_pad.add_probe(gst::PadProbeType::EVENT_UPSTREAM, move |_, probe_info| {
-        let mut status = status.lock().unwrap();
-        let original_status = status.clone();
+        let mut compositor = compositor.lock().unwrap();
+        let original_compositor = compositor.clone();
 
         let Some(ev) = probe_info.event() else {
             return gst::PadProbeReturn::Ok;
@@ -98,44 +98,44 @@ fn main() -> Result<(), anyhow::Error> {
         match nav_event {
             NavigationEvent::KeyPress { key, .. } => match key.as_str() {
                 "Left" => {
-                    status.move_pos(-10, 0);
+                    compositor.move_pos(-10, 0);
                 }
                 "Right" => {
-                    status.move_pos(10, 0);
+                    compositor.move_pos(10, 0);
                 }
                 "Up" => {
-                    status.move_pos(0, -10);
+                    compositor.move_pos(0, -10);
                 }
                 "Down" => {
-                    status.move_pos(0, 10);
+                    compositor.move_pos(0, 10);
                 }
                 "plus" => {
-                    status.zoom_in();
+                    compositor.zoom_in();
                 }
                 "minus" => {
-                    status.zoom_out();
+                    compositor.zoom_out();
                 }
                 "r" => {
-                    status.reset_position();
+                    compositor.reset_position();
                 }
                 "Shift_R" => {
-                    status.reset();
+                    compositor.reset();
                 }
                 "1" => {
-                    status.move_border_to(0);
+                    compositor.move_border_to(0);
                 }
                 "2" => {
-                    let w = status.width;
-                    status.move_border_to(w);
+                    let w = compositor.width;
+                    compositor.move_border_to(w);
                 }
                 "3" => {
-                    status.reset_border();
+                    compositor.reset_border();
                 }
                 "4" => {
-                    status.move_border(-10);
+                    compositor.move_border(-10);
                 }
                 "5" => {
-                    status.move_border(10);
+                    compositor.move_border(10);
                 }
                 _ => (),
             },
@@ -145,7 +145,7 @@ fn main() -> Result<(), anyhow::Error> {
                     let new_xpos = (x - state.clicked_x) as i32 + state.clicked_xpos;
                     let new_ypos = (y - state.clicked_y) as i32 + state.clicked_ypos;
 
-                    status.move_pos_to(new_xpos, new_ypos);
+                    compositor.move_pos_to(new_xpos, new_ypos);
                 }
             }
             NavigationEvent::MouseButtonPress { button, x, y, .. } => {
@@ -154,18 +154,18 @@ fn main() -> Result<(), anyhow::Error> {
                     state.clicked = true;
                     state.clicked_x = x;
                     state.clicked_y = y;
-                    state.clicked_xpos = status.offset_x;
-                    state.clicked_ypos = status.offset_y;
+                    state.clicked_xpos = compositor.offset_x;
+                    state.clicked_ypos = compositor.offset_y;
 
                     if y >= 600.0 {
-                        status.move_border_to(x as i32);
+                        compositor.move_border_to(x as i32);
                     }
                 } else if button == 2 || button == 3 || button == 274 || button == 273 {
-                    status.reset();
+                    compositor.reset();
                 } else if button == 4 {
-                    status.zoom_in_center_at(x as i32, y as i32);
+                    compositor.zoom_in_center_at(x as i32, y as i32);
                 } else if button == 5 {
-                    status.zoom_out_center_at(x as i32, y as i32);
+                    compositor.zoom_out_center_at(x as i32, y as i32);
                 }
             }
             NavigationEvent::MouseButtonRelease { button, .. } => {
@@ -176,17 +176,17 @@ fn main() -> Result<(), anyhow::Error> {
             }
             NavigationEvent::MouseScroll { x, y, delta_y, .. } => {
                 if delta_y > 0.0 {
-                    status.zoom_in_center_at(x as i32, y as i32);
+                    compositor.zoom_in_center_at(x as i32, y as i32);
                 } else if delta_y < 0.0 {
-                    status.zoom_out_center_at(x as i32, y as i32);
+                    compositor.zoom_out_center_at(x as i32, y as i32);
                 }
             }
             _ => (),
         }
 
-        if original_status != *status {
+        if original_compositor != *compositor {
             pipeline::update_mixer(
-                &status,
+                &compositor,
                 &mixer_sink_0_pad,
                 &mixer_sink_1_pad,
                 &crop0,
