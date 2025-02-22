@@ -251,7 +251,8 @@ impl Compositor {
 
         let unscaling = |w: i32| -> i32 {
             // crop is done over the original image
-            w * self.width / half_viewport_width
+            let u_w = w * self.width / half_viewport_width;
+            if u_w < self.width { u_w } else { 0 }
         };
 
         let pos0 = Position {
@@ -269,12 +270,7 @@ impl Compositor {
             height: pos_height,
             crop_right: if (pos_xpos + half_viewport_width) > half_width {
                 let crop = pos_xpos + half_viewport_width - half_width;
-                let crop = unscaling(crop);
-                if crop > half_width {
-                    0
-                } else {
-                    crop
-                }
+                unscaling(crop)
             } else {
                 0
             },
@@ -1369,5 +1365,64 @@ mod tests {
         assert_eq!(compositor.border, half_width, "compositor.border");
         assert_eq!(compositor.width, width, "compositor.width");
         assert_eq!(compositor.height, height, "compositor.height");
+    }
+
+
+   #[test]
+    fn test_sidebyside_bug_1() {
+        let mut compositor = Compositor{
+            mode: Mode::SideBySide,
+            zoom: 320,
+            offset_x: 315,
+            offset_y: -103,
+            ..Default::default()
+        };
+
+        let (pos0, pos1) = compositor.get_positions();
+
+        assert_eq!(compositor.zoom, 320, "compositor.zoom");
+        assert_eq!(compositor.offset_x, 315, "compositor.offset_x");
+        assert_eq!(compositor.offset_y, -103, "compositor.offset_y");
+        assert_eq!(compositor.width, WIDTH, "compositor.width");
+        assert_eq!(compositor.height, HEIGHT, "compositor.height");
+
+        assert_eq!(pos0.xpos, -389, "pos0.xpos");
+        assert_eq!(pos0.ypos, -319, "pos0.ypos");
+        assert_eq!(pos0.width, 1029, "pos0.width");
+        assert_eq!(pos0.height, 1152, "pos0.height");
+        assert_eq!(pos0.crop_right, 636, "pos0.crop_right");
+        assert_eq!(pos0.crop_left, 0, "pos0.crop_left");
+
+        assert_eq!(pos1.xpos, 640, "pos1.xpos");
+        assert_eq!(pos1.ypos, -319, "pos1.ypos");
+        assert_eq!(pos1.width, 1659, "pos1.width");
+        assert_eq!(pos1.height, 1152, "pos1.height");
+        assert_eq!(pos1.crop_right, 0, "pos1.crop_right");
+        assert_eq!(pos1.crop_left, 243, "pos1.crop_left");
+
+        compositor.move_pos(30, 0);
+        let (pos0, pos1) = compositor.get_positions();
+
+
+        assert_eq!(compositor.zoom, 320, "compositor.zoom");
+        assert_eq!(compositor.offset_x, 345, "compositor.offset_x");
+        assert_eq!(compositor.offset_y, -103, "compositor.offset_y");
+        assert_eq!(compositor.width, WIDTH, "compositor.width");
+        assert_eq!(compositor.height, HEIGHT, "compositor.height");
+
+        assert_eq!(pos0.xpos, -359, "pos0.xpos");
+        assert_eq!(pos0.ypos, -319, "pos0.ypos");
+        assert_eq!(pos0.width, 999, "pos0.width");
+        assert_eq!(pos0.height, 1152, "pos0.height");
+        assert_eq!(pos0.crop_right, 655, "pos0.crop_right");
+        assert_eq!(pos0.crop_left, 0, "pos0.crop_left");
+
+        assert_eq!(pos1.xpos, 640, "pos1.xpos");
+        assert_eq!(pos1.ypos, -319, "pos1.ypos");
+        assert_eq!(pos1.width, 1689, "pos1.width");
+        assert_eq!(pos1.height, 1152, "pos1.height");
+        assert_eq!(pos1.crop_right, 0, "pos1.crop_right");
+        assert_eq!(pos1.crop_left, 224, "pos1.crop_left");
+
     }
 }

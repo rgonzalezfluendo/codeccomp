@@ -6,7 +6,6 @@
 
 ## TODOs:
 
- * [ ] side by side preview mode
  * [ ] Bandwidth metrics
  * [ ] latency metrics
  * [ ] PSNR and SSIM metrics
