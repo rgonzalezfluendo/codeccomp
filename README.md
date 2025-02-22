@@ -14,8 +14,15 @@
  * [ ] Windows support
  * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
- * [ ] a new onlydecodebin without queues (parsebin and multiqueue from decodebin3 are not needed)
+ * [ ] more tour test with identity encoder and 8x8 input with real assert of the output
  * [ ] Add vulan backend `vulkanoverlaycompositor`
+
+
+## Future TODOs:
+
+ * [ ] Move logic to GStremaer elements (like a `smartcompositor`)
+ * [ ] a new `onlydecodebin` without queues (parsebin and multiqueue from decodebin3 are not needed)
+
 
 ## GStreamer issues
 
