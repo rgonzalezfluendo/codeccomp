@@ -15,6 +15,7 @@
  * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
  * [ ] a new onlydecodebin without queues (parsebin and multiqueue from decodebin3 are not needed)
+ * [ ] Add vulan backend `vulkanoverlaycompositor`
 
 ## GStreamer issues
 
@@ -132,6 +133,28 @@ or with compositor (TO BE CHECKED)
 gst-launch-1.0  gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=1000 !  "video/x-raw(memory:GLMemory), width=1280, height=720" ! glcolorconvert ! gldownload ! queue ! video/x-raw,format=Y444 ! videocrop right=1280 ! m.sink_0 compositor name=m sink_0::width=1280 sink_0::height=720 sink_0::xpos=1270 sink_0::ypos=603 ! "video/x-raw, width=1280, height=720" ! xvimagesink
 ...
 WARNING: erroneous pipeline: could not link queue0 to videocrop0 with caps video/x-raw, format=(string)Y444
+```
+
+### New vulkan backend
+
+```
+        gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=1000 ! video/x-raw(memory:GLMemory), framerate=30/1, width=1280, height=720, pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload ! queue ! tee name=tee_src
+        tee_src.src_0 ! queue name=enc0 ! x264enc bitrate=256 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4 ! queue name=dec0 !
+        decodebin3 ! videocrop name=crop0 ! queue name=end0 ! vulkanupload ! vulkancolorconvert ! mix.sink_0
+        tee_src.src_1 ! queue name=enc1 ! x264enc bitrate=2048 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4 ! queue name=dec1 !
+        decodebin3 ! videocrop name=crop1 ! queue name=end1 ! vulkanupload ! vulkancolorconvert ! mix.sink_1
+        vulkanoverlaycompositor  name=mix  ! vulkancolorconvert ! vulkandownload !
+        video/x-raw,framerate=30/1,width=1280, height=720, pixel-aspect-ratio=1/1 ! fpsdisplaysink video-sink=xvimagesink sync=false
+```
+Error: could not link vulkancolorconvert0 to mix
+
+
+```
+gstdump gst-launch-1.0 gltestsrc is-live=1 pattern=mandelbrot name=src num-buffers=1000 ! "video/x-raw(memory:GLMemory), framerate=30/1, width=1280, height=720, pixel-aspect-ratio=1/1" ! glcolorconvert ! gldownload ! queue ! x264enc bitrate=2048 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! queue ! decodebin3 ! queue ! vulkanupload ! vulkancolorconvert ! fakesink
+ERROR: from element /GstPipeline:pipeline0/GstGLTestSrc:src: Internal data stream error.
+Additional debug info:
+../gstreamer/subprojects/gstreamer/libs/gst/base/gstbasesrc.c(3177): gst_base_src_loop (): /GstPipeline:pipeline0/GstGLTestSrc:src:
+streaming stopped, reason not-negotiated (-4)
 ```
 
 ## GStreamer note
