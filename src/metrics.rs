@@ -26,7 +26,7 @@ pub struct Metrics {
 
 pub fn add_probe(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>, settings: &Settings) {
     add_raw_identity_probe(pipeline, metrics.clone(), settings);
-    add_encoder_probes(pipeline, metrics.clone(), settings);
+    add_encoder_probes(pipeline, metrics.clone());
 }
 
 fn add_raw_identity_probe(
@@ -125,7 +125,7 @@ fn add_raw_identity_probe(
     });
 }
 
-fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>, settings: &Settings) {
+fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
     let enc0 = pipeline.by_name("enc0").unwrap();
     let dec0 = pipeline.by_name("dec0").unwrap();
     let enc1 = pipeline.by_name("enc1").unwrap();
