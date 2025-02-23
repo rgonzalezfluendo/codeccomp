@@ -252,7 +252,11 @@ impl Compositor {
         let unscaling = |w: i32| -> i32 {
             // crop is done over the original image
             let u_w = w * self.width / half_viewport_width;
-            if u_w < self.width { u_w } else { 0 }
+            if u_w < self.width {
+                u_w
+            } else {
+                0
+            }
         };
 
         let pos0 = Position {
