@@ -19,8 +19,7 @@ const HELP: &str = include_str!("../doc/help.md");
 fn main() -> Result<(), anyhow::Error> {
     let settings = Settings::new()?;
 
-    gst::init()?;
-    gstoriginalbuffer::plugin_register_static()?;
+    pipeline::init()?;
 
     println!("Hello, video codec comparator\n{HELP}");
     if settings.debug {
