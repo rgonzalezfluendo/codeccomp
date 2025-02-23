@@ -1367,10 +1367,9 @@ mod tests {
         assert_eq!(compositor.height, height, "compositor.height");
     }
 
-
-   #[test]
+    #[test]
     fn test_sidebyside_bug_1() {
-        let mut compositor = Compositor{
+        let mut compositor = Compositor {
             mode: Mode::SideBySide,
             zoom: 320,
             offset_x: 315,
@@ -1403,7 +1402,6 @@ mod tests {
         compositor.move_pos(30, 0);
         let (pos0, pos1) = compositor.get_positions();
 
-
         assert_eq!(compositor.zoom, 320, "compositor.zoom");
         assert_eq!(compositor.offset_x, 345, "compositor.offset_x");
         assert_eq!(compositor.offset_y, -103, "compositor.offset_y");
@@ -1423,6 +1421,5 @@ mod tests {
         assert_eq!(pos1.height, 1152, "pos1.height");
         assert_eq!(pos1.crop_right, 0, "pos1.crop_right");
         assert_eq!(pos1.crop_left, 224, "pos1.crop_left");
-
     }
 }

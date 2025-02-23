@@ -4,7 +4,7 @@ use crate::Settings;
 
 use gst::prelude::*;
 
-pub fn get_srt(settings: Settings) -> String {
+pub fn get_srt(settings: &Settings) -> String {
     let src = settings.get_pipeline_src();
     let enc0 = settings.get_pipeline_enc0();
     let enc1 = settings.get_pipeline_enc1();
@@ -183,7 +183,7 @@ mod tests {
         //TODO refactor this logic with main
 
         gst::init().unwrap();
-        let pipeline_srt = get_srt(settings);
+        let pipeline_srt = get_srt(&settings);
 
         let pipeline = gst::parse::launch(&pipeline_srt)
             .unwrap()
