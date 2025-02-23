@@ -253,8 +253,7 @@ impl Settings {
     }
 
     pub fn get_metrics_font(&self) -> String {
-        // TODO add in settings and select Windows supported
-        "UbuntuMono Nerd Font Mono".to_string()
+        "Consolas 10".to_string()
     }
 
     pub fn get_pipeline_sink(&self) -> String {

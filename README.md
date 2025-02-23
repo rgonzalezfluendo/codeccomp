@@ -20,7 +20,7 @@ Nerd version (use `debug=1` to print in stdout):
   tee_src.src_1 ! queue name=enc1 ! x265enc bitrate=2048 tune=zerolatency speed-preset=ultrafast key-int-max=2560 ! queue name=dec1 !
   identity name=i1 ! decodebin3 ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
   glvideomixer name=mix  !
-  textoverlay name=metrics valignment=bottom font-desc="UbuntuMono Nerd Font Mono" !
+  textoverlay name=metrics valignment=bottom font-desc="Consolas 10" !
   video/x-raw,framerate=30/1,width=1280, height=720, pixel-aspect-ratio=1/1 ! xvimagesink sync=false
 ```
 
@@ -45,11 +45,8 @@ Nerd version (use `debug=1` to print in stdout):
 
  * [ ] create status with MouseState and compositor
  * [ ] no num-buffers
- * [ ] Bandwidth metrics
- * [ ] latency metrics
  * [ ] PSNR and SSIM metrics
  * [ ] VMAF metrics
- * [ ] Windows support
  * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
  * [ ] more tour test with identity encoder and 8x8 input with real assert of the output in the CI (see this commit msg)
