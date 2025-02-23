@@ -4,6 +4,7 @@
 //
 
 mod compositor;
+mod metrics;
 mod pipeline;
 mod settings;
 mod ui;
@@ -37,6 +38,7 @@ fn main() -> Result<(), anyhow::Error> {
         settings.input.width,
         settings.input.height,
     )));
+    let metrics = Arc::new(Mutex::new(metrics::Metrics::default()));
 
     gst::init().unwrap();
     let pipeline_srt = pipeline::get_srt(&settings);
@@ -50,7 +52,8 @@ fn main() -> Result<(), anyhow::Error> {
         .set_state(gst::State::Playing)
         .expect("Unable to set the pipeline to the `Playing` state");
 
-    ui::add_ui_probe(&pipeline, state.clone(), compositor.clone(), &settings);
+    ui::add_probe(&pipeline, state.clone(), compositor.clone(), &settings);
+    metrics::add_probe(&pipeline, metrics.clone(), &settings);
 
     let bus = pipeline.bus().unwrap();
     for msg in bus.iter_timed(gst::ClockTime::NONE) {

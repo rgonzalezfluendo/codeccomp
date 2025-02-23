@@ -204,6 +204,33 @@ impl Settings {
         }
     }
 
+    pub fn get_enc0_name(&self) -> String {
+        self.get_enc_name(&self.encoder0)
+    }
+
+    pub fn get_enc1_name(&self) -> String {
+        self.get_enc_name(&self.encoder1)
+    }
+
+    fn get_enc_name(&self, enc: &Encoder) -> String {
+        let bitrate = enc.bitrate;
+        match enc.kind {
+            EncoderType::identity => "identity".to_string(),
+            EncoderType::x264enc => {
+                format!("x264enc bitrate={bitrate}")
+            }
+            EncoderType::x265enc => {
+                format!("x265enc bitrate={bitrate}")
+            }
+            EncoderType::rav1enc => {
+                format!("rav1enc bitrate={bitrate}")
+            }
+            EncoderType::h266enc => {
+                unimplemented!();
+            }
+        }
+    }
+
     pub fn get_pipeline_compositor(&self) -> &str {
         match self.backend {
             BackendType::GL => "glvideomixer",

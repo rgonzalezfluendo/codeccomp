@@ -17,7 +17,7 @@ pub struct MouseState {
     clicked_ypos: i32,
 }
 
-pub fn add_ui_probe(
+pub fn add_probe(
     pipeline: &gst::Pipeline,
     state: Arc<Mutex<MouseState>>,
     compositor: Arc<Mutex<Compositor>>,
