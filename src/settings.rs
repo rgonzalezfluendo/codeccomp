@@ -279,6 +279,39 @@ impl Settings {
             format!("{caps} ! {videosink} sync=false")
         }
     }
-}
 
+    pub fn get_framerate(&self) -> (u64, u64) {
+        let parts: Vec<&str> = self.input.framerate.split('/').collect();
+
+        if parts.len() == 2 {
+            if let (Ok(numerator), Ok(denominator)) =
+                (parts[0].parse::<u64>(), parts[1].parse::<u64>())
+            {
+                return (numerator, denominator);
+            }
+        }
+
+        panic!("framerate format must be num/den as \"30/1\"");
+    }
+}
 // TODO: do settings.rs GStreamer agnostic
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_framerate() {
+        let mut s = Settings::default();
+        let (fps_n, fps_d) = s.get_framerate();
+
+        assert_eq!(fps_n, 30, "framerate num");
+        assert_eq!(fps_d, 1, "framerate den");
+
+        s.input.framerate = "30000/1001".to_string();
+        let (fps_n, fps_d) = s.get_framerate();
+
+        assert_eq!(fps_n, 30000, "framerate num");
+        assert_eq!(fps_d, 1001, "framerate den");
+    }
+}

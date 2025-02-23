@@ -45,7 +45,10 @@ fn add_raw_identity_probe(
     let enc0_name = settings.get_enc0_name();
     let enc1_name = settings.get_enc1_name();
 
-    let fps = 30; //TODO
+    let (fps_n, fps_d) = settings.get_framerate();
+    if fps_d != 1 {
+        unimplemented!();
+    }
     let settings_debug = settings.debug;
 
     //TODO use other pad ?
@@ -63,7 +66,7 @@ fn add_raw_identity_probe(
         let num_buffers1 = stats1.get::<u64>("num-buffers").unwrap();
 
         // TODO no hardcode metrics every second
-        if num_buffers1 % fps == 0 {
+        if num_buffers1 % fps_n == 0 {
             let (total_utime0, total_stime0, total_utime1, total_stime1) = get_cpu_usage();
 
             let mut metrics = metrics.lock().unwrap();
@@ -78,12 +81,12 @@ fn add_raw_identity_probe(
             metrics.enc1.num_bytes = num_bytes1;
             metrics.enc1.num_buffers = num_buffers1;
 
-            let bitrate0 = human_bytes((fps * num_bytes0) as f64 / num_buffers0 as f64);
+            let bitrate0 = human_bytes((fps_n * num_bytes0) as f64 / num_buffers0 as f64);
             let num_bytes0 = human_bytes(num_bytes0 as f64);
             let processing_time0 = metrics.enc0.total_processing_time / num_buffers0 as u32;
             let cpu_time0 = metrics.enc0.threads_utime + metrics.enc0.threads_stime;
 
-            let bitrate1 = human_bytes((fps * num_bytes1) as f64 / num_buffers1 as f64);
+            let bitrate1 = human_bytes((fps_n * num_bytes1) as f64 / num_buffers1 as f64);
             let num_bytes1 = human_bytes(num_bytes1 as f64);
             let processing_time1 = metrics.enc1.total_processing_time / num_buffers1 as u32;
             let cpu_time1 = metrics.enc1.threads_utime + metrics.enc1.threads_stime;
