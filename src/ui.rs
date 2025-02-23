@@ -43,9 +43,6 @@ pub fn add_ui_probe(
 
     // Probe added in the sink pad to get direct navigation events w/o transformation done by the zoom_mixer
     mixer_src_pad.add_probe(gst::PadProbeType::EVENT_UPSTREAM, move |_, probe_info| {
-        let mut compositor = compositor.lock().unwrap();
-        let original_compositor = compositor.clone();
-
         let Some(ev) = probe_info.event() else {
             return gst::PadProbeReturn::Ok;
         };
@@ -57,6 +54,9 @@ pub fn add_ui_probe(
         let Ok(nav_event) = NavigationEvent::parse(ev) else {
             return gst::PadProbeReturn::Ok;
         };
+
+        let mut compositor = compositor.lock().unwrap();
+        let original_compositor = compositor.clone();
 
         match nav_event {
             NavigationEvent::KeyPress { key, .. } => match key.as_str() {
