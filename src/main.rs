@@ -38,7 +38,7 @@ fn main() -> Result<(), anyhow::Error> {
         settings.input.width,
         settings.input.height,
     )));
-    let metrics = Arc::new(Mutex::new(metrics::Metrics::default()));
+    let metrics = Arc::new(Mutex::new(metrics::Metrics::new(&settings)));
 
     gst::init().unwrap();
     let pipeline_srt = pipeline::get_srt(&settings);
