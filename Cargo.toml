@@ -22,5 +22,8 @@ git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs"
 features = ["v1_24"]
 package="gstreamer-video"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+procfs = { version = "0.17", default-features = false }
+
 [features]
 expensive_tests = []
