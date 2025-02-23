@@ -252,6 +252,11 @@ impl Settings {
         }
     }
 
+    pub fn get_metrics_font(&self) -> String {
+        // TODO add in settings and select Windows supported
+        "UbuntuMono Nerd Font Mono".to_string()
+    }
+
     pub fn get_pipeline_sink(&self) -> String {
         let width = self.input.width;
         let height = self.input.height;
@@ -269,7 +274,7 @@ impl Settings {
         if self.nooutput {
             format!("{caps} ! fakesink sync=false")
         } else if self.debug {
-            format!("{caps} ! fpsdisplaysink video-sink={videosink} sync=false")
+            format!("{caps} ! {videosink} sync=false")
         } else {
             format!("{caps} ! {videosink} sync=false")
         }

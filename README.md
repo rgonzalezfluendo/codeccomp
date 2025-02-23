@@ -17,9 +17,10 @@ Nerd version (use `debug=1` to print in stdout):
   queue ! originalbuffersave ! tee name=tee_src
   tee_src.src_0 ! queue name=enc0 ! x264enc bitrate=256 tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4 ! queue name=dec0 !
   identity name=i0 ! decodebin3 ! videocrop name=crop0 ! queue name=end0 ! mix.sink_0
-  tee_src.src_1 ! queue name=enc1 ! identity ! queue name=dec1 !
+  tee_src.src_1 ! queue name=enc1 ! x265enc bitrate=2048 tune=zerolatency speed-preset=ultrafast key-int-max=2560 ! queue name=dec1 !
   identity name=i1 ! decodebin3 ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
   glvideomixer name=mix  !
+  textoverlay name=metrics valignment=bottom font-desc="UbuntuMono Nerd Font Mono" !
   video/x-raw,framerate=30/1,width=1280, height=720, pixel-aspect-ratio=1/1 ! xvimagesink sync=false
 ```
 

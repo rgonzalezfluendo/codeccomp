@@ -34,6 +34,9 @@ fn add_raw_identity_probe(
     metrics: Arc<Mutex<Metrics>>,
     settings: &Settings,
 ) {
+    //TODO add a setting to disable textoverlay
+    let textoverlay = pipeline.by_name("metrics").unwrap();
+
     let i0 = pipeline.by_name("i0").unwrap();
     let i1 = pipeline.by_name("i1").unwrap();
 
@@ -41,7 +44,9 @@ fn add_raw_identity_probe(
     let mixer_src_pad = mixer.static_pad("src").unwrap();
     let enc0_name = settings.get_enc0_name();
     let enc1_name = settings.get_enc1_name();
+
     let fps = 30; //TODO
+    let settings_debug = settings.debug;
 
     //TODO use other pad ?
     mixer_src_pad.add_probe(gst::PadProbeType::BUFFER, move |_, probe_info| {
@@ -107,7 +112,10 @@ fn add_raw_identity_probe(
                 "",
                 cpu_time1,
             );
-            println!("{}", text);
+            if settings_debug {
+                println!("{}", text);
+            }
+            textoverlay.set_property("text", text);
         }
 
         gst::PadProbeReturn::Ok
@@ -196,7 +204,6 @@ fn get_cpu_usage() -> (u64, u64, u64, u64) {
     let mut total_stime0: u64 = 0;
     let mut total_utime1: u64 = 0;
     let mut total_stime1: u64 = 0;
-
 
     for thread in process.tasks().unwrap().flatten() {
         let stat = thread.stat().unwrap();

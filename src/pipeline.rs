@@ -16,6 +16,7 @@ pub fn get_srt(settings: &Settings) -> String {
     let enc1 = settings.get_pipeline_enc1();
     let sink = settings.get_pipeline_sink();
     let compositor = settings.get_pipeline_compositor();
+    let font = settings.get_metrics_font();
 
     //TODO(-100) handle no opengl pipelines with compositor and videotestsrc
     //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
@@ -28,6 +29,7 @@ pub fn get_srt(settings: &Settings) -> String {
         tee_src.src_1 ! queue name=enc1 ! {enc1} ! queue name=dec1 !
         identity name=i1 ! decodebin3 ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
         {compositor} name=mix  !
+        textoverlay name=metrics valignment=bottom font-desc="{font}" !
         {sink}
     "#
     );
