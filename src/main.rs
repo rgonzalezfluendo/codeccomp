@@ -20,6 +20,7 @@ fn main() -> Result<(), anyhow::Error> {
     let settings = Settings::new()?;
 
     gst::init()?;
+    gstoriginalbuffer::plugin_register_static()?;
 
     println!("Hello, video codec comparator\n{HELP}");
     if settings.debug {

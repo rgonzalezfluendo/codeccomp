@@ -15,7 +15,8 @@ pub fn get_srt(settings: &Settings) -> String {
     //TODO(-10) handle to use glimagesinkelement (no KeyPress) or gtk4paintablesink (Note no NavigationEvent and env var GST_GTK4_WINDOW=1 needed)
     let pipeline_srt = format!(
         r#"
-        {src} ! queue ! tee name=tee_src
+        {src} !
+        queue ! originalbuffersave ! tee name=tee_src
         tee_src.src_0 ! queue name=enc0 ! {enc0} ! queue name=dec0 !
         decodebin3 ! videocrop name=crop0 ! queue name=end0 ! mix.sink_0
         tee_src.src_1 ! queue name=enc1 ! {enc1} ! queue name=dec1 !
