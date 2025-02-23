@@ -306,12 +306,14 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(not(feature = "expensive_tests"), ignore)]
     fn test_tour_gl() {
         test_tour(BackendType::GL);
     }
 
     #[test]
     #[cfg_attr(not(feature = "expensive_tests"), ignore)]
+    #[cfg(target_os = "linux")]
     fn test_tour_vaapi() {
         test_tour(BackendType::VAAPI);
     }
@@ -320,5 +322,12 @@ mod tests {
     #[cfg_attr(not(feature = "expensive_tests"), ignore)]
     fn test_tour_cpu() {
         test_tour(BackendType::CPU);
+    }
+
+    #[test]
+    #[cfg_attr(not(feature = "expensive_tests"), ignore)]
+    #[cfg(target_os = "windows")]
+    fn test_tour_d3d12() {
+        test_tour(BackendType::D3D12);
     }
 }

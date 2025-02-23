@@ -38,7 +38,7 @@ Nerd version (use `debug=1` to print in stdout):
  * [ ] Windows support
  * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
- * [ ] more tour test with identity encoder and 8x8 input with real assert of the output
+ * [ ] more tour test with identity encoder and 8x8 input with real assert of the output in the CI (see this commit msg)
 
 
 ## Future TODOs:
