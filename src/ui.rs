@@ -60,28 +60,28 @@ pub fn add_ui_probe(
 
         match nav_event {
             NavigationEvent::KeyPress { key, .. } => match key.as_str() {
-                "Left" => {
+                "Left" | "FLECHA IZQUIERDA" => {
                     compositor.move_pos(-10, 0);
                 }
-                "Right" => {
+                "Right" | "FLECHA DERECHA" => {
                     compositor.move_pos(10, 0);
                 }
-                "Up" => {
+                "Up" | "FLECHA ARRIBA" => {
                     compositor.move_pos(0, -10);
                 }
-                "Down" => {
+                "Down" | "FLECHA ABAJO" => {
                     compositor.move_pos(0, 10);
                 }
-                "plus" => {
+                "plus" | "+" => {
                     compositor.zoom_in();
                 }
-                "minus" => {
+                "minus" | "-" => {
                     compositor.zoom_out();
                 }
                 "r" => {
                     compositor.reset_position();
                 }
-                "Shift_R" => {
+                "Shift_R" | "R" => {
                     compositor.reset();
                 }
                 "1" => {

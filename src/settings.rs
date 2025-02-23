@@ -10,9 +10,10 @@ const FRAMERATE: &str = "30/1";
 pub enum BackendType {
     #[default]
     GL,
+    #[cfg(target_os = "linux")]
     VAAPI,
     CPU,
-    D3D11,
+    #[cfg(target_os = "windows")]
     D3D12,
 }
 
@@ -163,8 +164,15 @@ impl Settings {
 
             format!("gltestsrc is-live=1 pattern={pattern} name=src num-buffers={num_buffers} ! video/x-raw(memory:GLMemory), framerate={framerate}, width={width}, height={height}, pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload")
         } else {
-            //TODO no fix caps use generic
-            format!("v4l2src ! image/jpeg, width={width}, height={height}, framerate={framerate} ! jpegdec ! videoconvertscale ! videorate ")
+            let src = if cfg!(target_os = "linux") {
+                "v4l2src"
+            } else if cfg!(target_os = "windows") {
+                "mfvideosrc"
+            } else {
+                unimplemented!()
+            };
+
+            format!("{src} ! image/jpeg, width={width}, height={height}, framerate={framerate} ! jpegdec ! videoconvertscale ! videorate ")
         }
     }
 
@@ -199,14 +207,11 @@ impl Settings {
     pub fn get_pipeline_compositor(&self) -> &str {
         match self.backend {
             BackendType::GL => "glvideomixer",
+            #[cfg(target_os = "linux")]
             BackendType::VAAPI => "vacompositor",
             BackendType::CPU => "compositor",
-            BackendType::D3D11 => {
-                unimplemented!();
-            }
-            BackendType::D3D12 => {
-                unimplemented!();
-            }
+            #[cfg(target_os = "windows")]
+            BackendType::D3D12 => "d3d12compositor",
         }
     }
 
@@ -224,12 +229,22 @@ impl Settings {
         let width = self.input.width;
         let height = self.input.height;
         let framerate = &self.input.framerate;
-        if self.nooutput {
-            format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1 ! fakesink sync=false")
-        } else if self.debug {
-            format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1 ! fpsdisplaysink video-sink=xvimagesink sync=false")
+        let caps = format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1");
+
+        let videosink = if cfg!(target_os = "linux") {
+            "xvimagesink"
+        } else if cfg!(target_os = "windows") {
+            "d3d12videosink"
         } else {
-            format!("video/x-raw,framerate={framerate},width={width}, height={height}, pixel-aspect-ratio=1/1 ! xvimagesink sync=false")
+            unimplemented!()
+        };
+
+        if self.nooutput {
+            format!("{caps} ! fakesink sync=false")
+        } else if self.debug {
+            format!("{caps} ! fpsdisplaysink video-sink={videosink} sync=false")
+        } else {
+            format!("{caps} ! {videosink} sync=false")
         }
     }
 }
