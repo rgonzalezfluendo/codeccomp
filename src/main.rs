@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 
 const HELP: &str = include_str!("../doc/help.md");
 
-fn main() -> Result<(), anyhow::Error> {
+fn run() -> Result<(), anyhow::Error> {
     let settings = Settings::new()?;
 
     pipeline::init()?;
@@ -88,4 +88,16 @@ fn main() -> Result<(), anyhow::Error> {
         .expect("Unable to set the pipeline to the `Null` state");
 
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn main() -> Result<(), anyhow::Error> {
+    gst::macos_main(run);
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn main() -> Result<(), anyhow::Error> {
+    run()
 }

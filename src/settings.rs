@@ -197,6 +197,9 @@ impl Settings {
                 "v4l2src"
             } else if cfg!(target_os = "windows") {
                 "mfvideosrc"
+            } else if cfg!(target_os = "macos") {
+                //hardcoded until gst::DeviceMonitor
+                return "avfvideosrc ! video/x-raw, width=1280, height=720, format=NV12, framerate=30/1 ! videoconvertscale ! videorate ".to_string();
             } else {
                 unimplemented!()
             };
@@ -313,6 +316,8 @@ impl Settings {
             "xvimagesink"
         } else if cfg!(target_os = "windows") {
             "d3d12videosink"
+        } else if cfg!(target_os = "macos") {
+            "osxvideosink"
         } else {
             unimplemented!()
         };

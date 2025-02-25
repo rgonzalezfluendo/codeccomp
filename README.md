@@ -43,11 +43,11 @@ Nerd version (use `debug=1` to print in stdout):
 
 ## TODOs:
 
+ * [ ] support diff v4l2src resolutions
+ * [ ] more documentation
  * [ ] create status with MouseState and compositor
- * [ ] no num-buffers
  * [ ] PSNR and SSIM metrics
  * [ ] VMAF metrics
- * [ ] osX support (--)
  * [ ] fix and enable test_tour_vaapi and test_tour_cpu
  * [ ] more tour test with identity encoder and 8x8 input with real assert of the output in the CI (see this commit msg)
  * [ ] CI for Windows
