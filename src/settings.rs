@@ -201,7 +201,7 @@ impl Settings {
             EncoderType::identity => "identity".to_string(),
             EncoderType::custom => enc.custom.clone().expect("costom encoder w/o custom value"),
             EncoderType::x264enc => {
-                format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4")
+                format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120")
                 // constrained-baseline
             }
             EncoderType::x265enc => {
