@@ -87,56 +87,46 @@ impl fmt::Display for Metrics {
             unimplemented!();
         }
 
-        let enc0_name = &self.enc0.name;
-        let num_bytes0 = self.enc0.num_bytes;
-        let num_buffers0 = self.enc0.num_buffers;
-
-        let enc1_name = &self.enc1.name;
-        let num_bytes1 = self.enc1.num_bytes;
-        let num_buffers1 = self.enc1.num_buffers;
-
-        let bitrate0 = human_bytes((self.fps_n * num_bytes0) as f64 / num_buffers0 as f64);
-        let num_bytes0 = human_bytes(num_bytes0 as f64);
-        let processing_time0 = self.enc0.avg_processing_time();
-        let cpu_time0 = self.enc0.threads_utime + self.enc0.threads_stime;
-
-        let bitrate1 = human_bytes((self.fps_n * num_bytes1) as f64 / num_buffers1 as f64);
-        let num_bytes1 = human_bytes(num_bytes1 as f64);
-        let processing_time1 = self.enc1.avg_processing_time();
-        let cpu_time1 = self.enc1.threads_utime + self.enc1.threads_stime;
-
-        write!(
+        writeln!(
             f,
-            r#"
-{:->20}{:>37}{:->20}
-{:->14}{:>3}{:>3}{:>37}{:->14}{:>3}{:>3}
-{:->20}{:>37}{:->20}
-{:->18}/s{:>37}{:->18}/s
-{:->20?}{:>37}{:->20?}
-{:->8} clock ticks{:>37}{:->8} clock ticks
-"#,
-            enc0_name,
-            "",
-            enc1_name,
-            num_buffers0,
+            "{:->20}{:>37}{:->20}",
+            &self.enc0.name, "", &self.enc1.name
+        )?;
+        writeln!(
+            f,
+            "{:->14}{:>3}{:>3}{:>37}{:->14}{:>3}{:>3}",
+            self.enc0.num_buffers,
             self.enc0.max_buffers_inside,
             self.enc0.time_last_buffers.len(),
             "",
-            num_buffers1,
+            self.enc1.num_buffers,
             self.enc1.max_buffers_inside,
-            self.enc1.time_last_buffers.len(),
-            num_bytes0,
-            "",
-            num_bytes1,
-            bitrate0,
-            "",
-            bitrate1,
-            processing_time0,
-            "",
-            processing_time1,
-            cpu_time0,
-            "",
-            cpu_time1,
+            self.enc1.time_last_buffers.len()
+        )?;
+        let num_bytes0 = human_bytes(self.enc0.num_bytes as f64);
+        let num_bytes1 = human_bytes(self.enc1.num_bytes as f64);
+        writeln!(f, "{:->20}{:>37}{:->20}", num_bytes0, "", num_bytes1)?;
+
+        let bitrate0 =
+            human_bytes((self.fps_n * self.enc0.num_bytes) as f64 / self.enc0.num_buffers as f64);
+        let bitrate1 =
+            human_bytes((self.fps_n * self.enc1.num_bytes) as f64 / self.enc1.num_buffers as f64);
+        writeln!(f, "{:->18}/s{:>37}{:->18}/s", bitrate0, "", bitrate1)?;
+
+        let processing_time0 = self.enc0.avg_processing_time();
+        let processing_time1 = self.enc1.avg_processing_time();
+        writeln!(
+            f,
+            "{:->20?}{:>37}{:->20?}",
+            processing_time0, "", processing_time1
+        )?;
+
+        let cpu_time0 = self.enc0.threads_utime + self.enc0.threads_stime;
+        let cpu_time1 = self.enc1.threads_utime + self.enc1.threads_stime;
+        writeln!(
+            f,
+            "{:->8} clock ticks{:>37}{:->8} clock ticks",
+            cpu_time0, "", cpu_time1
         )
     }
 }
