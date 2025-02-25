@@ -37,7 +37,15 @@ pub fn get_srt(settings: &Settings) -> String {
     );
 
     if settings.debug {
-        println!("pipeline:\n{}", &pipeline_srt);
+        // Added strange repacements to allow copy&paste the text inside the terminal to fast debug
+        println!(
+            "pipeline: \n```\ngst-launch-1.0 -v \\\n{}\n```",
+            &pipeline_srt
+                .trim()
+                .replace("(", r"\(")
+                .replace(")", r"\)")
+                .replace("\n", "\\\n")
+        );
     }
 
     pipeline_srt
