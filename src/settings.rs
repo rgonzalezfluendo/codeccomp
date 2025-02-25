@@ -132,6 +132,8 @@ pub struct Settings {
     pub nooutput: bool,
     #[serde(default)]
     pub debug: bool,
+    #[serde(default)]
+    pub metrics: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -148,6 +150,7 @@ impl Default for Settings {
             sidebyside: false,
             nooutput: false,
             debug: false,
+            metrics: true,
         }
     }
 }

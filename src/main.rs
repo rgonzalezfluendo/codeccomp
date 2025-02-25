@@ -53,7 +53,9 @@ fn main() -> Result<(), anyhow::Error> {
         .expect("Unable to set the pipeline to the `Playing` state");
 
     ui::add_probe(&pipeline, state.clone(), compositor.clone(), &settings);
-    metrics::add_probe(&pipeline, metrics.clone(), &settings);
+    if settings.metrics {
+        metrics::add_probe(&pipeline, metrics.clone(), &settings);
+    }
 
     let bus = pipeline.bus().unwrap();
     for msg in bus.iter_timed(gst::ClockTime::NONE) {
