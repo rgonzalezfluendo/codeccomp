@@ -165,7 +165,8 @@ impl Settings {
         let width = self.input.width;
         let height = self.input.height;
         let framerate = &self.input.framerate;
-        let format = self.input.format.clone().map(|s| format!(" ! video/x-raw, format={}", s)).unwrap_or_else(|| "".to_string());
+        let format = self.input.format.clone().map(|s| format!("! video/x-raw, format={}", s)).unwrap_or_else(|| "".to_string());
+        let num_buffers = self.input.num_buffers.map(|s| format!(" num-buffers={}", s)).unwrap_or_else(|| "".to_string());
 
         if self.input.is_test() {
             // pattern=smpte
@@ -174,9 +175,8 @@ impl Settings {
                 .pattern
                 .clone()
                 .unwrap_or("mandelbrot".to_string());
-            let num_buffers = self.input.num_buffers.unwrap_or(1000);
 
-            format!("gltestsrc is-live=1 pattern={pattern} name=src num-buffers={num_buffers} ! video/x-raw(memory:GLMemory), framerate={framerate}, width={width}, height={height}, pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload {format}")
+            format!("gltestsrc is-live=1 pattern={pattern} {num_buffers} name=src  ! video/x-raw(memory:GLMemory), framerate={framerate}, width={width}, height={height}, pixel-aspect-ratio=1/1 ! glcolorconvert ! gldownload {format}")
         } else {
             let src = if cfg!(target_os = "linux") {
                 "v4l2src"
@@ -186,7 +186,7 @@ impl Settings {
                 unimplemented!()
             };
 
-            format!("{src} ! image/jpeg, width={width}, height={height}, framerate={framerate} ! jpegdec ! videoconvertscale ! videorate {format}")
+            format!("{src} {num_buffers} ! image/jpeg, width={width}, height={height}, framerate={framerate} ! jpegdec ! videoconvertscale ! videorate {format}")
         }
     }
 
