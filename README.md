@@ -6,8 +6,9 @@
 Simple:
 
  * Simple is better than complex.
- * No UI (Only Gstreamer NavigationEvent)
+ * No UI (Only Gstreamer NavigationEvent) as  [this sample](https://gitlab.freedesktop.org/gstreamer/gstreamer-rs/-/blob/main/examples/src/bin/zoom.rs)
  * Only one pipeline (sorry for the strings algebra)
+ * Versatile and extensible configuration file
 
 ![pipeline.png](./doc/pipeline.png)
 
@@ -24,6 +25,46 @@ Nerd version (use `debug=1` to print in stdout):
   video/x-raw,framerate=30/1,width=1280, height=720, pixel-aspect-ratio=1/1 ! xvimagesink sync=false
 ```
 
+## Configuration Structure
+
+The configuration is structured as follows:
+
+```toml
+[input]
+width = 1280
+height = 720
+framerate = "30/1"
+format = "YUV"            # If not defined the pipeline negociates the format
+input = "Test"            # Values "Test"|"Camera"
+pattern = "smpte"         # Only for input Test, check gst-inspect-1.0 gltestsrc for more values
+num_buffers = 100         # No num_buffers if not defined
+
+[encoder0]
+kind = "x264enc"          # Values "identity"|"custom"|"x264enc"|"x265enc"|"rav1enc"|"h266enc"
+bitrate = 2028
+custom = ""               # GStreamer encoder with properties to use when kind is "custom"
+decoder = "decodebin3"    # GStreamer decoder to use with this encoder. decodebin3 by default.
+
+[encoder1]
+kind = "x265enc"
+bitrate = 2048
+decoder = "decodebin3"
+
+[backend]
+backend = "GL"            # Values "GL"|"VAAPI"|"CPU"|"D3D12"
+
+[options]
+sidebyside = false        # Initial layout used
+nooutput = false          # To use fake sink
+debug = false             # To print usefule info in the stdout
+metrics = true            # To disable the metrics
+```
+
+You can override settings using environment variables:
+
+```
+$ CODECCOMP__INPUT__INPUT=Camera CODECCOMP__DEBUG=1 ./codeccomp
+```
 ## Links
 
 ### Internal
