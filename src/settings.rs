@@ -33,6 +33,9 @@ fn default_width() -> i32 {
 fn default_height() -> i32 {
     720
 }
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Input {
@@ -132,7 +135,7 @@ pub struct Settings {
     pub nooutput: bool,
     #[serde(default)]
     pub debug: bool,
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub metrics: bool,
 }
 impl Default for Settings {
@@ -168,8 +171,17 @@ impl Settings {
         let width = self.input.width;
         let height = self.input.height;
         let framerate = &self.input.framerate;
-        let format = self.input.format.clone().map(|s| format!("! video/x-raw, format={}", s)).unwrap_or_else(|| "".to_string());
-        let num_buffers = self.input.num_buffers.map(|s| format!(" num-buffers={}", s)).unwrap_or_else(|| "".to_string());
+        let format = self
+            .input
+            .format
+            .clone()
+            .map(|s| format!("! video/x-raw, format={}", s))
+            .unwrap_or_default();
+        let num_buffers = self
+            .input
+            .num_buffers
+            .map(|s| format!(" num-buffers={}", s))
+            .unwrap_or_default();
 
         if self.input.is_test() {
             // pattern=smpte
@@ -307,8 +319,6 @@ impl Settings {
 
         if self.nooutput {
             format!("{caps} ! fakesink sync=false")
-        } else if self.debug {
-            format!("{caps} ! {videosink} sync=false")
         } else {
             format!("{caps} ! {videosink} sync=false")
         }

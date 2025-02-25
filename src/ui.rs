@@ -56,7 +56,7 @@ pub fn add_probe(
         };
 
         let mut compositor = compositor.lock().unwrap();
-        let original_compositor = compositor.clone();
+        let original_compositor = *compositor;
 
         match nav_event {
             NavigationEvent::KeyPress { key, .. } => match key.as_str() {
