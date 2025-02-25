@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
@@ -14,7 +15,8 @@ pub struct EncMetrics {
     name: String,
     num_buffers: u64,
     num_bytes: u64,
-    time_last_buffer: Option<SystemTime>,
+    time_last_buffers: VecDeque<SystemTime>,
+    max_buffers_inside: usize,
     total_processing_time: Duration,
     threads_utime: u64,
     threads_stime: u64,
@@ -34,10 +36,12 @@ impl Metrics {
 
         let enc0 = EncMetrics {
             name: s.get_enc0_name(),
+            time_last_buffers: VecDeque::with_capacity(25),
             ..Default::default()
         };
         let enc1 = EncMetrics {
             name: s.get_enc1_name(),
+            time_last_buffers: VecDeque::with_capacity(25),
             ..Default::default()
         };
 
@@ -46,6 +50,33 @@ impl Metrics {
             fps_d,
             enc0,
             enc1,
+        }
+    }
+}
+
+impl EncMetrics {
+    pub fn buffer_in(&mut self) {
+        self.time_last_buffers.push_back(SystemTime::now());
+        if self.time_last_buffers.len() > self.max_buffers_inside {
+            self.max_buffers_inside = self.time_last_buffers.len();
+        }
+    }
+
+    pub fn buffer_out(&mut self) {
+        // Metric calculation does not require input-output buffer association
+        if let Some(arrive) = self.time_last_buffers.pop_front() {
+            let diff = arrive.elapsed().unwrap();
+            self.total_processing_time += diff;
+        } else {
+            panic!("output buffer w/o input");
+        }
+    }
+
+    pub fn avg_processing_time(&self) -> Duration {
+        if self.num_buffers != 0 {
+            self.total_processing_time / self.num_buffers as u32
+        } else {
+            Duration::ZERO
         }
     }
 }
@@ -66,18 +97,19 @@ impl fmt::Display for Metrics {
 
         let bitrate0 = human_bytes((self.fps_n * num_bytes0) as f64 / num_buffers0 as f64);
         let num_bytes0 = human_bytes(num_bytes0 as f64);
-        let processing_time0 = self.enc0.total_processing_time / num_buffers0 as u32;
+        let processing_time0 = self.enc0.avg_processing_time();
         let cpu_time0 = self.enc0.threads_utime + self.enc0.threads_stime;
 
         let bitrate1 = human_bytes((self.fps_n * num_bytes1) as f64 / num_buffers1 as f64);
         let num_bytes1 = human_bytes(num_bytes1 as f64);
-        let processing_time1 = self.enc1.total_processing_time / num_buffers1 as u32;
+        let processing_time1 = self.enc1.avg_processing_time();
         let cpu_time1 = self.enc1.threads_utime + self.enc1.threads_stime;
 
         write!(
             f,
             r#"
 {:->20}{:>37}{:->20}
+{:->14}{:>3}{:>3}{:>37}{:->14}{:>3}{:>3}
 {:->20}{:>37}{:->20}
 {:->18}/s{:>37}{:->18}/s
 {:->20?}{:>37}{:->20?}
@@ -86,6 +118,13 @@ impl fmt::Display for Metrics {
             enc0_name,
             "",
             enc1_name,
+            num_buffers0,
+            self.enc0.max_buffers_inside,
+            self.enc0.time_last_buffers.len(),
+            "",
+            num_buffers1,
+            self.enc1.max_buffers_inside,
+            self.enc1.time_last_buffers.len(),
             num_bytes0,
             "",
             num_bytes1,
@@ -187,7 +226,7 @@ fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
             };
 
             let mut metrics = metrics.lock().unwrap();
-            metrics.enc0.time_last_buffer = Some(SystemTime::now());
+            metrics.enc0.buffer_in();
 
             gst::PadProbeReturn::Ok
         });
@@ -202,8 +241,7 @@ fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
             };
 
             let mut metrics = metrics.lock().unwrap();
-            let diff = metrics.enc0.time_last_buffer.unwrap().elapsed().unwrap();
-            metrics.enc0.total_processing_time += diff;
+            metrics.enc0.buffer_out();
 
             gst::PadProbeReturn::Ok
         });
@@ -218,7 +256,7 @@ fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
             };
 
             let mut metrics = metrics.lock().unwrap();
-            metrics.enc1.time_last_buffer = Some(SystemTime::now());
+            metrics.enc1.buffer_in();
 
             gst::PadProbeReturn::Ok
         });
@@ -233,8 +271,7 @@ fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
             };
 
             let mut metrics = metrics.lock().unwrap();
-            let diff = metrics.enc1.time_last_buffer.unwrap().elapsed().unwrap();
-            metrics.enc1.total_processing_time += diff;
+            metrics.enc1.buffer_out();
 
             gst::PadProbeReturn::Ok
         });
@@ -269,4 +306,321 @@ fn get_cpu_usage() -> (u64, u64, u64, u64) {
 #[cfg(not(target_os = "linux"))]
 fn get_cpu_usage() -> (u64, u64, u64, u64) {
     (0, 0, 0, 0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compositor_default() {
+        let metrics = Metrics::default();
+
+        assert_eq!(metrics.fps_n, 0, "metrics.fps_n");
+        assert_eq!(metrics.fps_d, 0, "metrics.fps_d");
+        assert_eq!(metrics.enc0.name, "", "metrics.enc0.name");
+        assert_eq!(metrics.enc0.num_buffers, 0, "metrics.enc0.num_buffers");
+        assert_eq!(metrics.enc0.num_bytes, 0, "metrics.enc0.num_bytes");
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            0,
+            "metrics.enc0.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc0.time_last_buffers.capacity(),
+            0,
+            "metrics.enc0.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc0.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc0.avg_processing_time(),
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(metrics.enc0.threads_utime, 0, "metrics.enc0.threads_utime");
+        assert_eq!(metrics.enc0.threads_stime, 0, "metrics.enc0.threads_stime");
+
+        assert_eq!(metrics.enc1.name, "", "metrics.enc0.name");
+        assert_eq!(metrics.enc1.num_buffers, 0, "metrics.enc1.num_buffers");
+        assert_eq!(metrics.enc1.num_bytes, 0, "metrics.enc1.num_bytes");
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            0,
+            "metrics.enc1.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc1.total_processing_time"
+        );
+        assert_eq!(metrics.enc1.threads_utime, 0, "metrics.enc1.threads_utime");
+        assert_eq!(metrics.enc1.threads_stime, 0, "metrics.enc1.threads_stime");
+    }
+
+    #[test]
+    fn test_compositor_new() {
+        let s = Settings::default();
+        let metrics = Metrics::new(&s);
+
+        assert_eq!(metrics.fps_n, 30, "metrics.fps_n");
+        assert_eq!(metrics.fps_d, 1, "metrics.fps_d");
+
+        assert_ne!(metrics.enc1.name, "", "metrics.enc0.name not empty");
+        assert_eq!(metrics.enc0.num_buffers, 0, "metrics.enc0.num_buffers");
+        assert_eq!(metrics.enc0.num_bytes, 0, "metrics.enc0.num_bytes");
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            0,
+            "metrics.enc0.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc0.time_last_buffers.capacity(),
+            25,
+            "metrics.enc0.time_last_buffers.capacity == 25"
+        );
+        assert_eq!(
+            metrics.enc0.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(metrics.enc0.threads_utime, 0, "metrics.enc0.threads_utime");
+        assert_eq!(metrics.enc0.threads_stime, 0, "metrics.enc0.threads_stime");
+
+        assert_ne!(metrics.enc1.name, "", "metrics.enc0.name not empty");
+        assert_eq!(metrics.enc1.num_buffers, 0, "metrics.enc1.num_buffers");
+        assert_eq!(metrics.enc1.num_bytes, 0, "metrics.enc1.num_bytes");
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            25,
+            "metrics.enc1.time_last_buffers.capacity == 25"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc1.total_processing_time"
+        );
+        assert_eq!(metrics.enc1.threads_utime, 0, "metrics.enc1.threads_utime");
+        assert_eq!(metrics.enc1.threads_stime, 0, "metrics.enc1.threads_stime");
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_buffer_out_no_in() {
+        let mut metrics = Metrics::default();
+
+        metrics.enc0.buffer_out();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_buffer_in_out_out() {
+        let mut metrics = Metrics::default();
+
+        metrics.enc0.buffer_in();
+        metrics.enc0.buffer_out();
+        metrics.enc0.buffer_out();
+    }
+
+    #[test]
+    fn test_buffer_in_and_out_no() {
+        let mut metrics = Metrics::default();
+
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            0,
+            "metrics.enc0.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc0.time_last_buffers.capacity(),
+            0,
+            "metrics.enc0.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc0.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            0,
+            "metrics.enc1.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+
+        metrics.enc0.buffer_in();
+
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            1,
+            "metrics.enc0.time_last_buffers.len == 1"
+        );
+        assert_ne!(
+            metrics.enc0.time_last_buffers.capacity(),
+            0,
+            "metrics.enc0.time_last_buffers.capacity != 0"
+        );
+        assert_eq!(
+            metrics.enc0.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            0,
+            "metrics.enc1.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+
+        metrics.enc0.buffer_out();
+        let t1 = metrics.enc0.total_processing_time;
+
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            0,
+            "metrics.enc0.time_last_buffers.len == 0"
+        );
+        assert_ne!(
+            metrics.enc0.time_last_buffers.capacity(),
+            0,
+            "metrics.enc0.time_last_buffers.capacity != 0"
+        );
+        assert!(
+            metrics.enc0.total_processing_time > Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            0,
+            "metrics.enc1.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+
+        metrics.enc0.buffer_in();
+        metrics.enc0.buffer_in();
+        metrics.enc0.buffer_in();
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            3,
+            "metrics.enc0.time_last_buffers.len == 0"
+        );
+        assert_ne!(
+            metrics.enc0.time_last_buffers.capacity(),
+            0,
+            "metrics.enc0.time_last_buffers.capacity != 0"
+        );
+        assert_eq!(
+            metrics.enc0.total_processing_time, t1,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.time_last_buffers.len == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            0,
+            "metrics.enc1.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+
+        metrics.enc0.buffer_out();
+        assert!(
+            metrics.enc0.total_processing_time > t1,
+            "metrics.enc0.total_processing_time"
+        );
+        let t1 = metrics.enc0.total_processing_time;
+
+        metrics.enc0.buffer_out();
+        assert!(
+            metrics.enc0.total_processing_time > t1,
+            "metrics.enc0.total_processing_time"
+        );
+        let t1 = metrics.enc0.total_processing_time;
+
+        metrics.enc0.buffer_out();
+
+        assert_eq!(
+            metrics.enc0.time_last_buffers.len(),
+            0,
+            "metrics.enc0.count_buffers_inside == 0"
+        );
+        assert_ne!(
+            metrics.enc0.time_last_buffers.capacity(),
+            0,
+            "metrics.enc0.time_last_buffers.capacity != 0"
+        );
+        assert!(
+            metrics.enc0.total_processing_time > t1,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc0.max_buffers_inside, 3,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.len(),
+            0,
+            "metrics.enc1.count_buffers_inside == 0"
+        );
+        assert_eq!(
+            metrics.enc1.time_last_buffers.capacity(),
+            0,
+            "metrics.enc1.time_last_buffers.capacity == 0"
+        );
+        assert_eq!(
+            metrics.enc1.total_processing_time,
+            Duration::ZERO,
+            "metrics.enc0.total_processing_time"
+        );
+        assert_eq!(
+            metrics.enc1.max_buffers_inside, 0,
+            "metrics.enc0.total_processing_time"
+        );
+    }
 }
