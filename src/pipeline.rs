@@ -13,7 +13,9 @@ pub fn init() -> Result<(), anyhow::Error> {
 pub fn get_srt(settings: &Settings) -> String {
     let src = settings.get_pipeline_src();
     let enc0 = settings.get_pipeline_enc0();
+    let dec0 = settings.get_pipeline_dec0();
     let enc1 = settings.get_pipeline_enc1();
+    let dec1 = settings.get_pipeline_dec1();
     let sink = settings.get_pipeline_sink();
     let compositor = settings.get_pipeline_compositor();
     let font = settings.get_metrics_font();
@@ -25,9 +27,9 @@ pub fn get_srt(settings: &Settings) -> String {
         {src} !
         queue ! originalbuffersave ! tee name=tee_src
         tee_src.src_0 ! queue name=enc0 ! {enc0} ! queue name=dec0 !
-        identity name=i0 ! decodebin3 ! videocrop name=crop0 ! queue name=end0 ! mix.sink_0
+        identity name=i0 ! {dec0} ! videocrop name=crop0 ! queue name=end0 ! mix.sink_0
         tee_src.src_1 ! queue name=enc1 ! {enc1} ! queue name=dec1 !
-        identity name=i1 ! decodebin3 ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
+        identity name=i1 ! {dec1} ! videocrop name=crop1 ! queue name=end1 ! mix.sink_1
         {compositor} name=mix  !
         textoverlay name=metrics valignment=bottom font-desc="{font}" !
         {sink}

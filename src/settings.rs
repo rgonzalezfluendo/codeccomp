@@ -71,6 +71,7 @@ impl Input {
 #[derive(Debug, Deserialize, Default)]
 pub enum EncoderType {
     identity,
+    custom,
     #[default]
     x264enc,
     x265enc,
@@ -81,17 +82,27 @@ pub enum EncoderType {
 fn default_bitrate() -> u32 {
     2048
 }
+
+fn default_decoder() -> String {
+    "decodebin3".to_string()
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Encoder {
     pub kind: EncoderType,
     #[serde(default = "default_bitrate")]
     pub bitrate: u32,
+    pub custom: Option<String>,
+    #[serde(default = "default_decoder")]
+    pub decoder: String,
 }
 impl Default for Encoder {
     fn default() -> Self {
         Self {
             kind: EncoderType::default(),
             bitrate: default_bitrate(),
+            custom: None,
+            decoder: default_decoder(),
         }
     }
 }
@@ -188,6 +199,7 @@ impl Settings {
         let bitrate = enc.bitrate;
         match enc.kind {
             EncoderType::identity => "identity".to_string(),
+            EncoderType::custom => enc.custom.clone().expect("costom encoder w/o custom value"),
             EncoderType::x264enc => {
                 format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120 ! video/x-h264,profile=high-4:4:4")
                 // constrained-baseline
@@ -216,6 +228,11 @@ impl Settings {
         let bitrate = enc.bitrate;
         match enc.kind {
             EncoderType::identity => "identity".to_string(),
+            EncoderType::custom => {
+                let c = enc.custom.clone().expect("custom encoder w/o custom value");
+                format!("c {}", c.chars().take(10).collect::<String>())
+            }
+
             EncoderType::x264enc => {
                 format!("x264enc bitrate={bitrate}")
             }
@@ -229,6 +246,18 @@ impl Settings {
                 unimplemented!();
             }
         }
+    }
+
+    pub fn get_pipeline_dec0(&self) -> String {
+        self.get_pipeline_dec(&self.encoder0)
+    }
+
+    pub fn get_pipeline_dec1(&self) -> String {
+        self.get_pipeline_dec(&self.encoder1)
+    }
+
+    fn get_pipeline_dec(&self, enc: &Encoder) -> String {
+        enc.decoder.clone()
     }
 
     pub fn get_pipeline_compositor(&self) -> &str {
