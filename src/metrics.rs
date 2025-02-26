@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant};
 
 use gst::prelude::*;
 use human_bytes::human_bytes;
@@ -15,7 +15,7 @@ pub struct EncMetrics {
     name: String,
     num_buffers: u64,
     num_bytes: u64,
-    time_last_buffers: VecDeque<SystemTime>,
+    time_last_buffers: VecDeque<Instant>,
     max_buffers_inside: usize,
     total_processing_time: Duration,
     threads_utime: u64,
@@ -56,7 +56,7 @@ impl Metrics {
 
 impl EncMetrics {
     pub fn buffer_in(&mut self) {
-        self.time_last_buffers.push_back(SystemTime::now());
+        self.time_last_buffers.push_back(Instant::now());
         if self.time_last_buffers.len() > self.max_buffers_inside {
             self.max_buffers_inside = self.time_last_buffers.len();
         }
@@ -65,7 +65,7 @@ impl EncMetrics {
     pub fn buffer_out(&mut self) {
         // Metric calculation does not require input-output buffer association
         if let Some(arrive) = self.time_last_buffers.pop_front() {
-            let diff = arrive.elapsed().unwrap();
+            let diff = arrive.elapsed();
             self.total_processing_time += diff;
         } else {
             panic!("output buffer w/o input");
