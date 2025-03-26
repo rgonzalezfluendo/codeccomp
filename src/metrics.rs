@@ -1,3 +1,4 @@
+use once_cell::sync::Lazy;
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -9,6 +10,18 @@ use human_bytes::human_bytes;
 use procfs::process::Process;
 
 use crate::Settings;
+use gstoriginalbuffer::originalbuffermeta::OriginalBufferMeta;
+
+use rust_vmaf::{
+    model::{VmafModel, VmafModelConfig},
+    picture::{Picture, Yuv420Planar},
+    ContextConfig, PollMethod, VmafContext,
+};
+
+static VMAF_MODEL: Lazy<VmafModel> = Lazy::new(|| {
+    VmafModel::model_load("vmaf_v0.6.1", VmafModelConfig::default())
+        .expect("Failed to load VMAF model")
+});
 
 #[derive(Default)]
 pub struct EncMetrics {
@@ -20,6 +33,8 @@ pub struct EncMetrics {
     total_processing_time: Duration,
     threads_utime: u64,
     threads_stime: u64,
+    vmaf_ctx: Option<VmafContext<rust_vmaf::Process>>,
+    vmaf_score: f64,
 }
 
 #[derive(Default)]
@@ -34,14 +49,29 @@ impl Metrics {
     pub fn new(s: &Settings) -> Self {
         let (fps_n, fps_d) = s.get_framerate();
 
+        let cfg = ContextConfig::default();
+        let ctx0 = VmafContext::new(cfg).unwrap();
+        let vmaf_ctx0 = ctx0
+            .use_features_from_model(&VMAF_MODEL)
+            .unwrap()
+            .start_processing();
+
+        let ctx1 = VmafContext::new(cfg).unwrap();
+        let vmaf_ctx1 = ctx1
+            .use_features_from_model(&VMAF_MODEL)
+            .unwrap()
+            .start_processing();
+
         let enc0 = EncMetrics {
             name: s.get_enc0_name(),
             time_last_buffers: VecDeque::with_capacity(25),
+            vmaf_ctx: Some(vmaf_ctx0),
             ..Default::default()
         };
         let enc1 = EncMetrics {
             name: s.get_enc1_name(),
             time_last_buffers: VecDeque::with_capacity(25),
+            vmaf_ctx: Some(vmaf_ctx1),
             ..Default::default()
         };
 
@@ -50,6 +80,14 @@ impl Metrics {
             fps_d,
             enc0,
             enc1,
+        }
+    }
+
+    fn for_enc(&mut self, id: usize) -> &mut EncMetrics {
+        match id {
+            0 => &mut self.enc0,
+            1 => &mut self.enc1,
+            _ => unreachable!(),
         }
     }
 }
@@ -127,12 +165,19 @@ impl fmt::Display for Metrics {
             f,
             "{:->8} clock ticks{:>37}{:->8} clock ticks",
             cpu_time0, "", cpu_time1
+        )?;
+
+        write!(
+            f,
+            "{:->20.4}{:>37}{:->20.4}",
+            self.enc0.vmaf_score, "", self.enc1.vmaf_score
         )
     }
 }
 
 pub fn add_probe(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>, settings: &Settings) {
     add_raw_identity_probe(pipeline, metrics.clone(), settings);
+    add_vmaf_probes(pipeline, metrics.clone());
     add_encoder_probes(pipeline, metrics.clone());
 }
 
@@ -195,6 +240,78 @@ fn add_raw_identity_probe(
 
         gst::PadProbeReturn::Ok
     });
+}
+
+fn add_vmaf_probe(pad: &gst::Pad, metrics: Arc<Mutex<Metrics>>, enc_id: usize) {
+    let metrics = metrics.clone();
+    pad.add_probe(gst::PadProbeType::BUFFER, move |_, probe_info| {
+        let Some(buffer) = probe_info.buffer() else {
+            dbg!("no buffer");
+            return gst::PadProbeReturn::Ok;
+        };
+
+        let Some(ometa) = buffer.meta::<OriginalBufferMeta>() else {
+            //gst::element_warning!(self, gst::StreamError::Failed, ["Buffer {} is missing the GstOriginalBufferMeta, put originalbuffersave upstream in your pipeline", buffer]);
+            dbg!("no meta");
+            return gst::PadProbeReturn::Ok;
+        };
+
+        let outbuf = ometa.original().copy();
+
+        let map = buffer
+            .map_readable()
+            .map_err(|_| {
+                dbg!("error map");
+                gst::FlowError::Error
+            })
+            .unwrap();
+
+        let outmap = outbuf
+            .map_readable()
+            .map_err(|_| {
+                dbg!("error map");
+                gst::FlowError::Error
+            })
+            .unwrap();
+
+        //TODO avoid hardcoded resolution
+        let len = 1280 * 720 + 1280 * 720 / 2;
+
+        let reference = Picture::try_from(
+            Yuv420Planar::new_with_combined_planes(&outmap.as_slice()[0..len], 1280, 720).unwrap(),
+        )
+        .unwrap();
+
+        let target = Picture::try_from(
+            Yuv420Planar::new_with_combined_planes(&map.as_slice()[0..len], 1280, 720).unwrap(),
+        )
+        .unwrap();
+
+        let mut metrics = metrics.lock().unwrap();
+        let enc_metrics = metrics.for_enc(enc_id);
+
+        let ctx = enc_metrics.vmaf_ctx.as_mut().unwrap();
+        ctx.read_pictures(Some((reference, target))).unwrap();
+        let num = enc_metrics.num_buffers as u32;
+        if num > 60 {
+            let range = Some((num - 15)..(num - 5));
+            enc_metrics.vmaf_score = ctx
+                .score_pooled(&VMAF_MODEL, PollMethod::Mean, range)
+                .unwrap();
+        }
+
+        gst::PadProbeReturn::Ok
+    });
+}
+
+fn add_vmaf_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
+    let dec0 = pipeline.by_name("ia0").unwrap();
+    let dec1 = pipeline.by_name("ia1").unwrap();
+    let dec0_sink_pad = dec0.static_pad("sink").unwrap();
+    let dec1_sink_pad = dec1.static_pad("sink").unwrap();
+
+    add_vmaf_probe(&dec0_sink_pad, metrics.clone(), 0);
+    add_vmaf_probe(&dec1_sink_pad, metrics.clone(), 1);
 }
 
 fn add_encoder_probes(pipeline: &gst::Pipeline, metrics: Arc<Mutex<Metrics>>) {
