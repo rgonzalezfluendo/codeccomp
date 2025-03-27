@@ -86,12 +86,12 @@ pub fn add_probe(
                 }
                 "1" => {
                     compositor.split_mode();
-                    compositor.move_border_to(0);
+                    let w = compositor.width;
+                    compositor.move_border_to(w);
                 }
                 "2" => {
                     compositor.split_mode();
-                    let w = compositor.width;
-                    compositor.move_border_to(w);
+                    compositor.move_border_to(0);
                 }
                 "3" => {
                     compositor.split_mode();
