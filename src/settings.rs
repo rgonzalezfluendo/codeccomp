@@ -220,7 +220,7 @@ impl Settings {
         let bitrate = enc.bitrate;
         match enc.kind {
             EncoderType::identity => "identity".to_string(),
-            EncoderType::custom => enc.custom.clone().expect("costom encoder w/o custom value"),
+            EncoderType::custom => enc.custom.clone().expect("custom encoder w/o custom value"),
             EncoderType::x264enc => {
                 format!("x264enc bitrate={bitrate} tune=zerolatency speed-preset=ultrafast threads=4 key-int-max=2560 b-adapt=0 vbv-buf-capacity=120")
                 // constrained-baseline
@@ -250,8 +250,9 @@ impl Settings {
         match enc.kind {
             EncoderType::identity => "identity".to_string(),
             EncoderType::custom => {
-                let c = enc.custom.clone().expect("custom encoder w/o custom value");
-                format!("c {}", c.chars().take(10).collect::<String>())
+                "VVC/H.266".to_string()
+                // let c = enc.custom.clone().expect("custom encoder w/o custom value");
+                // format!("c {}", c.chars().take(10).collect::<String>())
             }
 
             EncoderType::x264enc => {

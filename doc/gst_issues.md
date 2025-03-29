@@ -144,6 +144,11 @@ Additional debug info:
 streaming stopped, reason not-negotiated (-4)
 ```
 
+## originalbuffer: make originalbuffermeta avaliabe out of the crate
+
+https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs/-/merge_requests/2139
+
+
 # GStreamer notes
 
 ## decodebin3 ! videocrop ! vacompositor uses avdec_h264
